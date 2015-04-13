@@ -1,0 +1,15 @@
+function foo()
+  local x = 1
+    
+ -- local c = assert(socket.connect("localhost",12345))
+  c:send("hello?")
+  c:close()
+  foo2 = function ()
+    print(x)
+  end
+  
+  return foo2
+end
+
+foo()()
+

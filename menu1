@@ -1,0 +1,71 @@
+title = 'Access Control'
+
+funList = {}
+
+status = false
+funList.toggle = function ()
+  if status then status = false
+  else status = true
+  end
+  menu.Menu:writeStatus("Toggled to " .. tostring(status))
+  loadMenu(root)
+end
+
+alarmEnabled = false
+funList.enableAlarm = function ()
+  if alarmEnabled then
+    menu.Menu:writeStatus("Alarm is already enabled!")
+  else
+     alarmEnabled = true
+     menu.Menu:writeStatus("Sounding alarm!")
+  end
+  loadMenu(root)
+end
+
+funList.disableAlarm = function ()
+  if alarmEnabled then
+    alarmEnabled = false
+    menu.Menu:writeStatus("Alarm has been disabled.")
+  else
+    menu.Menu:writeStatus("Alarm is already disabled.")
+  end
+  loadMenu(root)
+end
+
+funList.elevate = function ()
+  menu.Menu:writeStatus("Elevating Specified User")
+  loadMenu(users)
+end
+
+funList.loadRoot = function ()
+  loadMenu(root)
+end
+
+funList.loadUsers = function ()
+  loadMenu(users)
+end
+
+funList.exit = function ()
+  term.clear()
+  term.setCursorPos(1,1)
+end
+
+root = {
+  'Alarm',
+   {
+    'Enable', 'enableAlarm',
+    'Disable', 'disableAlarm'
+   },
+  'User Permissions', 'loadUsers',
+  'Exit', 'exit'
+}
+
+users = {
+    'ArqiTek',
+     {
+      'Toggle', 'elevate',
+      'Elevate', 'elevate'
+     },
+    'LordKemp', 'elevate',
+    'return', 'loadRoot'
+}

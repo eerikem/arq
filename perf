@@ -1,0 +1,165 @@
+--Product of ArqiTeknologies Corp.
+--
+--present
+--
+--Author: ArqiTek
+--Copyright 2250
+
+-------Perf-------------
+
+local w,h = term.getSize()
+local menuIndent = 2
+Perf = {w = w, h = h, select = 1, title = "ArqiTeknologies"}
+
+function Perf:new()
+  local x = {}
+  setmetatable(x, self)
+  self.__index = self
+  return x
+end
+
+function Perf:init(monitor, uis, title)
+  self.term = peripheral.wrap(monitor)
+  local x,y = self.term.getSize()
+  self.running = true
+  self.w = x
+  self.h = y
+  self.term.clear()
+  self.term.setCursorPos(1,1)
+  self.select = 1
+  self.title = title
+  self.status = ""
+  self.side = monitor
+  self.uis = uis
+  self.list = {}
+end
+
+function Perf:setSelected(x)
+  self.select = x
+end
+
+function Perf:getMonitor()
+  return self.side
+end
+
+function Perf:showDelay(delay,h,uis)
+  for i=0, self.w do
+    self:writeChar(1+i,h,'.')
+    uis:writeChar(1+i,h,'.')
+    sleep(delay/self.w)
+  end
+end
+
+function Perf:writeChar(x,y,c)
+  self.term.setCursorPos(x,y)
+  self.term.write(c)
+end
+
+function Perf:showDelayTwo(delay,h,uis)
+  for i=0, self.w do
+    self:writeChar(1+i,h,' ')
+    uis:writeChar(1+i,h,' ')
+    sleep(delay/self.w)
+    self:writeChar(1+i,h,'.')
+    uis:writeChar(1+i,h,'.')
+  end
+end
+
+function Perf:undoDelay(delay,h,uis)
+  for i=0, self.w do
+    self:writeChar(i,h,' ')
+    uis:writeChar(i,h,' ')
+    sleep(delay/self.w)
+  end
+end
+
+function Perf:printCentered(str, ypos)
+  self.term.setCursorPos(self.w/2 - #str/2 + 1, ypos)
+  self.term.write(str)
+end
+
+function Perf:printRight(str, ypos)
+  self.term.setCursorPos(self.w - #str, ypos)
+  self.term.write(str)
+end
+
+function Perf:indentLeft(str, ypos, indent)
+  self.term.setCursorPos(indent, ypos)
+  self.term.write(str)
+end
+
+function Perf:clear()
+  self.term.clear()
+end
+
+function Perf:writeStatus(str)
+  self.status = str
+  self.term.setCursorPos(1, self.h)
+  self.term.write(self.status)
+end
+
+function Perf:clearStatus()
+  self:writeStatus("         ")
+end
+
+function Perf:handleSelection(str, index, indent)
+  if self.select == index then
+    self:indentLeft("["..str.."]", index+2, indent-1)
+  else
+    self:indentLeft(" "..str.."   ", index+2, indent-1)
+  end
+end
+
+function Perf:drawHeader()
+  self.term.clear()
+  self:printCentered(self.title, 1)
+end
+
+function Perf:drawList(list)
+  self.list = list
+  local l = table.getn(list)
+  for i=1, l do
+    self:handleSelection(list[i], i, menuIndent)
+  end
+  self:writeStatus(self.status)
+end
+
+function Perf:exit()
+  self.term.clear()
+  self.term.setCursorPos(1,1)
+  self.running = false
+end
+
+handleSignals = function()
+  rednet.open(bundle)
+end
+
+function Perf:refresh()
+  self:drawHeader()
+  self:drawList(self.list)
+  self:clearStatus()
+end
+
+function Perf:drawMain(list)
+  self:drawHeader()
+  self:drawList(list)
+  --print("waiting for event")
+  local wait = true
+  while wait do
+    event, side, xPos, yPos = os.pullEvent("monitor_touch")
+  --print(self.side.." received event from "..side)
+  --os.pull Event picking up Event at the same time.
+    if self.side == side then
+       wait = false
+    end
+  end
+  menuItems = table.getn(list)
+  if yPos - menuIndent <= menuItems and yPos - menuIndent > 0
+    then self.select = yPos - menuIndent
+      return true
+  else
+    self:writeStatus(yPos.." click")
+    print (yPos.." click")
+    return false
+  end
+end

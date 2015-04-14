@@ -5,6 +5,8 @@
 --Author: ArqiTek
 --Copyrite 2250
 
+print(shell.path())
+shell.setDir("arq")
 os.loadAPI("menu")
 
 function printUsage()

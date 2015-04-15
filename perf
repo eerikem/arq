@@ -11,20 +11,23 @@ local w,h = term.getSize()
 local menuIndent = 2
 Perf = {w = w, h = h, select = 1, title = "ArqiTeknologies"}
 
-function Perf:new()
-  local x = {}
+function Perf:new(o)
+  --print "hello"
+  local x = o or {}
   setmetatable(x, self)
   self.__index = self
   return x
 end
 
 function Perf:init(monitor, uis, title)
-  self.term = peripheral.wrap(monitor)
+  --Peripheral expects a wrapped terminal.
+  --self.term = peripheral.wrap(monitor)
+  self.term = monitor
   local x,y = self.term.getSize()
   self.running = true
   self.w = x
   self.h = y
-  self.term.clear()
+  self.term.clear() 
   self.term.setCursorPos(1,1)
   self.select = 1
   self.title = title
@@ -139,6 +142,7 @@ function Perf:refresh()
   self:drawList(self.list)
   self:clearStatus()
 end
+
 
 function Perf:drawMain(list)
   self:drawHeader()

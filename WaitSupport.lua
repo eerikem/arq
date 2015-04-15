@@ -63,13 +63,13 @@ function waitSignal(signalName)
     return coroutine.yield()
 end
 
-function signal(signalName)
+function signal(signalName, ...)
     local threads = WAITING_ON_SIGNAL[signalName]
     if threads == nil then return end
 
     WAITING_ON_SIGNAL[signalName] = nil
     for _, co in ipairs(threads) do
-        coroutine.resume(co)
+        coroutine.resume(co, unpack(arg))
     end
 end
 

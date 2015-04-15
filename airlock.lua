@@ -1,11 +1,13 @@
-title = ' Airlock'
 
-funList = {}
 
-locked = true
-activeMonitor = ""
+local airlock = {}
+root = airlock
 
-doors = {
+local title = ' Airlock' 
+local locked = true
+local uis = {}
+airlock.uis = uis
+local doors = {
   {
     side="back",
     cable=colors.white,
@@ -19,63 +21,76 @@ doors = {
 }
 
 
-delay = 2
+local delay = 2
 
-funList.unlock = function (door)
+local unlock = function (door)
+  print("unlock?")
   redstone.setBundledOutput(door.side,colors.combine(door.cable,redstone.getBundledOutput(door.side)))
 end
 
-funList.lock = function (door)
+local lock = function (door)
+  print("lock?")
   redstone.setBundledOutput(door.side,colors.subtract(redstone.getBundledOutput(door.side),door.cable))
 end
 
-funList.cycleAirlock = function (ui)
+
+local cycleAirlock = function (ui)
   print("Cycling Airlock")
-  local uis = ui.uis
-  ui:clear()
-  uis:clear()
+  ui.clear()
   ui:printCentered("Airlock",1)
-  uis:printCentered("Airlock",1)
   ui:printCentered(" OPEN ",3)
-  uis:printCentered(" OPEN ",3)
-  side = activeMonitor
-  if doors[1].monitor == side then
+  local insideDoor, outsideDoor
+  if doors[1].monitor == ui.name then
     insideDoor = doors[1]
     outsideDoor = doors[2]
   else 
     insideDoor = doors[2]
     outsideDoor = doors[1]
   end
-  funList.unlock(insideDoor)
+  unlock(insideDoor)
   ui:showDelay(delay,4)
-  funList.lock(insideDoor)
+  lock(insideDoor)
   ui:printCentered("CYCLING",3)
-  uis:printCentered("CYCLING",3)
   ui:showDelayTwo(delay,4)
-  funList.unlock(outsideDoor)
+  unlock(outsideDoor)
   ui:printCentered("LOCKING",3)
-  uis:printCentered("LOCKING",3)
   ui:undoDelay(delay,4)
-  funList.lock(outsideDoor)
-  ui:clearStatus()
-  uis:clearStatus()
+  lock(outsideDoor)
+  --ui:clearStatus()
   print("end cycle")
 end
 
-funList.lockPeripherals = function (ui)
-  ui:writeStatus("lock?")
+local lockPeripherals = function (ui)
+  --ui:writeStatus("lock?")
 end
 
-funList.exit = function (ui)
-  ui:exit()
-  --term.clear()
-  --term.setCursorPos(1,1)
+local exit = function (ui)
+  ui:terminate()
 end
 
-root = {
-  'Cycle', 'cycleAirlock',
+local menu = {
+  'Cycle', cycleAirlock,
   'Other',{
-    'Lock', 'lockPeripherals',
-    'Exit', 'exit'
+    'Lock', lockPeripherals,
+    'Exit', exit
     }
 }
+
+
+airlock.init = function()
+  local runs = {}
+  for n=1, #doors do
+    local ui = UI:aquireMonitor(doors[n].monitor)
+    table.insert(uis,ui)
+    ui.clear()
+  end
+end
+
+airlock.main = function()
+  for n=1, #uis do
+    local m = uis[n]:readMenu(menu)
+    m.run()
+    --runProcess(m.run)
+  end
+end
+

@@ -12,6 +12,7 @@ dofile("arq/ui.lua")
 
 local ui = UI:new(term)
 local parentTerm = ui.current()
+local uis = {}
 
 local function getFile()
   io.write("->")
@@ -78,59 +79,63 @@ function queryUser(str)
   --parent.restoreCursor()
 end
 
+
+local function shutdown()
+  for n = 1, #uis do
+    uis[n]:terminate()
+  end
+  ui:terminate()
+end
+
+
 function askQuit()
   if ui:yesNo("Do you wish to QUIT?") then
-    ui:terminate()
+    shutdown()
   end
 end
 
-function main()
+local function runFile(file)
+  dofile(shell.resolve(file))
+  assert(root.init,"Error, file is not a correct ARQ executable")
+  root.init(function() return writeStatus end)
+  for n = 1, #root.uis do
+    table.insert(uis,root.uis[n])
+  end
+  --runProcess(root.main)
+  root.main()
+end
+
+local function run()
   ui:clear()
   ui:printCentered("ArqiTeknologies",1,2)
 
+  runFile("arq/airlock.lua")
+
   local w,h = ui.getSize()
-  ui:indentLeft("a message here",0,h-2)
-  sleep(1)
-  local r = queryUser("What would you like?")
-  writeStatus("You asked for " .. r)
-  sleep(1)
+  --ui:indentLeft("a message here",0,h-2)
+  --sleep(1)
+  --local r = queryUser("What would you like?")
+  --writeStatus("You asked for " .. r)
+  --sleep(1)
   askQuit()
 end
 
 
-
-local function aquireMonitors(_table)
-  local mon1, mon2 = peripheral.find("monitor", function(name,object) return _table[name] end)
-  if mon1 and mon2 then
-    writeStatus("Detected monitors")
-    return mon1, mon2
-  else
-    error("Problem detecting monitors")
+local function eventListener()
+  --local args = {os.pullEvent()}
+  while true do
+    signal(os.pullEvent())
   end
 end
 
-local m1, m2 = aquireMonitors({monitor_0=true,monitor_1=true})
 
-root = {
-  'Cycle', 'cycleAirlock',
-  'Other',{
-    'Lock', 'lockPeripherals',
-    'Exit', 'exit'
-    }
-}
-
-local function initAirlocks(m1,m2)
-  local init = function(ui)
-    ui.clear()
-    local menu = ui:readMenu(root)
-    menu.draw()
-  end
-  init(m1)
-  init(m2)
+local function main()
+  parallel.waitForAny(run,eventListener)
 end
 
-local ui1, ui2 = UI:new(m1), UI:new(m2)
-initAirlocks(ui1,ui2)
 
+
+
+main()
 --ui:drawHeader()
 --ui:indentLeft("Welcome to ARQ",3,0)

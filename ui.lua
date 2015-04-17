@@ -16,14 +16,15 @@ function UI:new(o)
 end
 
 
-function UI:wipe(n)
+function UI:wipe(n,x,y)
   local m = 0
-  local x,y = self.getCursorPos()
+  local a,b = self.getCursorPos()
+  self.setCursorPos(x,y)
   while m < n do
     self.write(" ")
     m = m + 1
   end
-  self.setCursorPos(x,y)
+  self.setCursorPos(a,b)
 end
 
 function UI:writeChar(x,y,c)
@@ -71,7 +72,7 @@ function UI:showDelay(delay,h)
   local w = self.getSize() 
   for i=0, w do
     self:writeChar(1+i,h,'.')
-    sleep(delay/w)
+    waitSeconds(delay/w)
   end
 end
 
@@ -84,7 +85,7 @@ function UI:showDelayTwo(delay,h)
   local w = self.getSize()
   for i=0, w do
     self:writeChar(1+i,h,' ')
-    sleep(delay/w)
+    waitSeconds(delay/w)
     self:writeChar(1+i,h,'.')
   end
 end
@@ -93,7 +94,7 @@ function UI:undoDelay(delay,h)
   local w = self.getSize()
   for i=0, w do
     self:writeChar(i,h,' ')
-    sleep(delay/w)
+    waitSeconds(delay/w)
   end
 end
 
@@ -105,6 +106,7 @@ function UI:readMenu(menu)
   local menuIndent = 2
   local selected = 1
   local runMenu
+  local running = true
   for i = 1, #menu, 2 do
     table.insert(items,menu[i])
     table.insert(values,menu[i+1])
@@ -122,18 +124,30 @@ local function drawList(list)
   --self.list = list
   local l = table.getn(list)
   for i=1, l do
-    handleSelection(list[i], i, 0)
+    if type(list[i]) == "function" then
+      handleSelection(list[i](), i, 0)
+    else
+      handleSelection(list[i], i, 0)
+    end
   end
   --self:writeStatus(self.status)
-end  
+end
 
-local function handleEvent()
+local function handleEvent(xPos,yPos)
   local v = values[selected]
   if  type(v) == "function" then
     v(self)
-  else
+  else if v == "BACK" then
+    running = false
+  else if type(v) == "table" then
     local m = self:readMenu(v)
-    m.run()
+    m.cycle()
+  else
+    local w,h = self.getSize()
+    self:wipe(#items[v]+2,(w-(#items[v]+2))/2+1,yPos)
+    self:printCentered("Bad Item",yPos)
+  end
+  end
   end
 end
 
@@ -149,26 +163,31 @@ local function setSelected(list,yPos)
   end
 end
 
+cycleMenu = function (list)
+  while running do
+    runMenu(list)
+  end
+end
+
 runMenu = function (list)
   --self:printCentered(root.title,1)
   self.clear()
   drawList(list)
-  local running = true
-  while running do
-    local event, monitor, xPos, yPos = waitSignal("monitor_touch")
-  --print(self.name.." received event from "..side)
+  --print (self.name .. " waiting for touch!")
+  local event, monitor, xPos, yPos = waitSignal("monitor_touch")
+  --print(self.name.." received event ".. event .. " from "..monitor)
   --os.pull Event picking up Event at the same time.
-    if self.name == monitor and setSelected(list,yPos) then
-      handleEvent(xPos,yPos)
-    else
-      runMenu(list)
-    end
+  if self.name == monitor and setSelected(list,yPos) then
+    return handleEvent(xPos,yPos)
+  else
+    return runMenu(list)
   end
 end
 
   local funs = {}
   funs.draw = function() drawList(items) end
   funs.run = function() runMenu(items) end
+  funs.cycle = function() cycleMenu(items) end
   return funs
 end
 --END MENUS
@@ -185,6 +204,7 @@ function UI:aquireMonitor(_name)
     error("Problem detecting " .. name)
   end
 end
+
 
 
 function UI:yesNo(str)

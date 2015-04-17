@@ -4,9 +4,19 @@ local airlock = {}
 root = airlock
 
 local title = ' Airlock' 
-local locked = true
+local locked = false
+local sealed = true
 local uis = {}
 airlock.uis = uis
+
+local function lockMenuItem()
+  if locked then
+    return "Unlock?"
+  else
+    return "Lock"
+  end
+end
+
 local doors = {
   {
     side="back",
@@ -24,17 +34,24 @@ local doors = {
 local delay = 2
 
 local unlock = function (door)
-  print("unlock?")
-  redstone.setBundledOutput(door.side,colors.combine(door.cable,redstone.getBundledOutput(door.side)))
+  --print("unlock?")
+  if not locked then
+    redstone.setBundledOutput(door.side,colors.combine(door.cable,redstone.getBundledOutput(door.side)))
+  end
 end
 
 local lock = function (door)
-  print("lock?")
+  --print("lock?")
   redstone.setBundledOutput(door.side,colors.subtract(redstone.getBundledOutput(door.side),door.cable))
 end
 
 
 local cycleAirlock = function (ui)
+
+  if not locked and sealed then
+  
+  sealed = false
+  
   print("Cycling Airlock")
   ui.clear()
   ui:printCentered("Airlock",1)
@@ -57,11 +74,20 @@ local cycleAirlock = function (ui)
   ui:undoDelay(delay,4)
   lock(outsideDoor)
   --ui:clearStatus()
+  ui.menu.draw()
   print("end cycle")
+  
+  sealed = true
+  else
+    if locked then
+       ui:printCentered("LOCKED!",3)
+       waitSeconds(1.5)
+    end
+  end
 end
 
 local lockPeripherals = function (ui)
-  --ui:writeStatus("lock?")
+  locked = not locked
 end
 
 local exit = function (ui)
@@ -71,8 +97,8 @@ end
 local menu = {
   'Cycle', cycleAirlock,
   'Other',{
-    'Lock', lockPeripherals,
-    'Exit', exit
+    lockMenuItem, lockPeripherals,
+    'Back', "BACK"
     }
 }
 
@@ -89,8 +115,9 @@ end
 airlock.main = function()
   for n=1, #uis do
     local m = uis[n]:readMenu(menu)
-    m.run()
-    --runProcess(m.run)
+    --m.run()
+    uis[n].menu = m
+    runProcess(m.cycle)
   end
 end
 

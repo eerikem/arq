@@ -9,7 +9,7 @@ local WAITING_ON_TIME = {}
 local WAITING_ON_SIGNAL = {}
 
 -- Keep track of how long the game has been running.
-local CURRENT_TIME = 0
+--local CURRENT_TIME = 0
 
 function waitSeconds(seconds)
     -- Grab a reference to the current running coroutine.
@@ -19,12 +19,47 @@ function waitSeconds(seconds)
     assert(co ~= nil, "The main thread cannot wait!")
 
     -- Store the coroutine and its wakeup time in the WAITING_ON_TIME table
-    local wakeupTime = CURRENT_TIME + seconds
+    --local wakeupTime = CURRENT_TIME + seconds
+    local wakeupTime = os.startTimer(seconds)
     WAITING_ON_TIME[co] = wakeupTime
-
+    
+    
     -- And suspend the process
     return coroutine.yield(co)
 end
+
+local function resume(co, ...)
+  --print "restarting starting co"
+  local ok, param = coroutine.resume(co,unpack(arg))
+  if not ok then
+    print "received error"
+    error( param )
+  else
+    return param
+  end
+end
+
+function wakerUpper()
+  while true do
+    local event, time = os.pullEvent("timer")
+    --print ("waking all at "..time)
+    local threadsToWake = {}
+    for co, wakeupTime in pairs(WAITING_ON_TIME) do
+      --print ("wakeupTime is "..wakeupTime)
+      if wakeupTime == time then
+        table.insert(threadsToWake, co)
+      end
+    end
+    
+    --print ("waking "..#threadsToWake.." threads")
+    
+    for _, co in ipairs(threadsToWake) do
+      WAITING_ON_TIME[co] = nil
+      resume(co)
+    end
+  end
+end
+
 
 function wakeUpWaitingThreads(deltaTime)
     -- This function should be called once per game logic update with the amount of time
@@ -44,16 +79,17 @@ function wakeUpWaitingThreads(deltaTime)
     -- Now wake them all up.
     for _, co in ipairs(threadsToWake) do
         WAITING_ON_TIME[co] = nil -- Setting a field to nil removes it from the table
-        coroutine.resume(co)
+        resume(co)
     end
 end
+
 
 function waitSignal(signalName)
     -- Same check as in waitSeconds; the main thread cannot wait
     local co = coroutine.running()
     assert(co ~= nil, "The main thread cannot wait!")
 
-    if WAITING_ON_SIGNAL[signalStr] == nil then
+    if WAITING_ON_SIGNAL[signalName] == nil then
         -- If there wasn't already a list for this signal, start a new one.
         WAITING_ON_SIGNAL[signalName] = { co }
     else
@@ -66,15 +102,15 @@ end
 function signal(signalName, ...)
     local threads = WAITING_ON_SIGNAL[signalName]
     if threads == nil then return end
-
+    print ("threads waiting: " .. #threads)
     WAITING_ON_SIGNAL[signalName] = nil
     for _, co in ipairs(threads) do
-        coroutine.resume(co, unpack(arg))
+        resume(co, signalName, unpack(arg))
     end
 end
 
 function runProcess(func)
     -- This function is just a quick wrapper to start a coroutine.
     local co = coroutine.create(func)
-    return coroutine.resume(co)
+    return resume(co)
 end

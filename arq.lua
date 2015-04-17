@@ -70,7 +70,7 @@ function queryUser(str)
   w.setBackgroundColor(colors.black)
   --w:indentLeft(">",2,3)
   w.setCursorPos(3,3)
-  w:wipe(#str)
+  w:wipe(#str,3,3)
   w.setCursorBlink(true)
   local r = io.read()
   w.setCursorBlink(false)
@@ -110,7 +110,10 @@ local function run()
   ui:printCentered("ArqiTeknologies",1,2)
 
   runFile("arq/airlock.lua")
-
+  
+  waitSeconds(1)
+  print "WAITED 1"
+  
   local w,h = ui.getSize()
   --ui:indentLeft("a message here",0,h-2)
   --sleep(1)
@@ -130,7 +133,7 @@ end
 
 
 local function main()
-  parallel.waitForAny(run,eventListener)
+  parallel.waitForAny(run,wakerUpper,eventListener)
 end
 
 

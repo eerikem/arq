@@ -215,10 +215,19 @@ function UI:yesNo(str)
   local w = UI:new(window.create(self.current(),x,y,#str+4,3))
   local parent = self.redirect(w)
   w.setBackgroundColor(colors.blue)
+  parent.setBackgroundColor(colors.black)
   w.clear()
   w:printCentered(str,2)
   w.setBackgroundColor(colors.black)
+  w:printCentered("hello?",3)
   self.redirect(parent)
+  for k,v in pairs(w) do
+    if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,4) end
+  --term.write(tostring(k).."  ")
+  end
+  for k,v in pairs(parent) do
+    if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,5) end
+  end
   
   while true do
     local id, K = waitSignal("key")

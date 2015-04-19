@@ -3,7 +3,7 @@
 local airlock = {}
 root = airlock
 
-local title = ' Airlock' 
+local title = 'Airlock' 
 local locked = false
 local sealed = true
 local uis = {}
@@ -75,7 +75,7 @@ local cycleAirlock = function (ui)
   lock(outsideDoor)
   --ui:clearStatus()
   ui.menu.draw()
-  print("end cycle")
+  --print("end cycle")
   
   sealed = true
   else
@@ -116,6 +116,7 @@ airlock.main = function()
   for n=1, #uis do
     local m = uis[n]:readMenu(menu)
     --m.run()
+    m.setTitle(title)
     uis[n].menu = m
     runProcess(m.cycle)
   end

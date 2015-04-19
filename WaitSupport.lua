@@ -95,14 +95,17 @@ function waitSignal(signalName)
     else
         table.insert(WAITING_ON_SIGNAL[signalName], co)
     end
-
+    --printTable(WAITING_ON_SIGNAL)
     return coroutine.yield()
 end
 
 function signal(signalName, ...)
     local threads = WAITING_ON_SIGNAL[signalName]
+    print ("received signal "..signalName)
+    printTable(WAITING_ON_SIGNAL)
+    sleep(1)
     if threads == nil then return end
-    print ("threads waiting: " .. #threads)
+    --print ("threads waiting: " .. #threads)
     WAITING_ON_SIGNAL[signalName] = nil
     for _, co in ipairs(threads) do
         resume(co, signalName, unpack(arg))
@@ -113,4 +116,8 @@ function runProcess(func)
     -- This function is just a quick wrapper to start a coroutine.
     local co = coroutine.create(func)
     return resume(co)
+end
+
+function getWaitList()
+  return WAITING_ON_SIGNAL
 end

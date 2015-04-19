@@ -104,8 +104,10 @@ function UI:readMenu(menu)
   local items = {}
   local values = {}
   local menuIndent = 2
+  local menuLeftIndent = 0
   local selected = 1
   local runMenu
+  local title
   local running = true
   for i = 1, #menu, 2 do
     table.insert(items,menu[i])
@@ -122,12 +124,14 @@ end
 
 local function drawList(list)
   --self.list = list
+  if title ~= nil then 
+  self:indentLeft(title,0,1) end
   local l = table.getn(list)
   for i=1, l do
     if type(list[i]) == "function" then
-      handleSelection(list[i](), i, 0)
+      handleSelection(list[i](), i, menuLeftIndent)
     else
-      handleSelection(list[i], i, 0)
+      handleSelection(list[i], i, menuLeftIndent)
     end
   end
   --self:writeStatus(self.status)
@@ -141,11 +145,12 @@ local function handleEvent(xPos,yPos)
     running = false
   else if type(v) == "table" then
     local m = self:readMenu(v)
+    m.setTitle(items[selected])
     m.cycle()
   else
-    local w,h = self.getSize()
-    self:wipe(#items[v]+2,(w-(#items[v]+2))/2+1,yPos)
-    self:printCentered("Bad Item",yPos)
+    self:wipe(#items[selected]+2,menuLeftIndent+1,yPos)
+    self:indentLeft("Bad Item",menuLeftIndent+1,yPos)
+    waitSeconds(1.5)
   end
   end
   end
@@ -169,18 +174,29 @@ cycleMenu = function (list)
   end
 end
 
-runMenu = function (list)
-  --self:printCentered(root.title,1)
+local runMenuMonitor = function (list)
   self.clear()
   drawList(list)
-  --print (self.name .. " waiting for touch!")
   local event, monitor, xPos, yPos = waitSignal("monitor_touch")
-  --print(self.name.." received event ".. event .. " from "..monitor)
-  --os.pull Event picking up Event at the same time.
   if self.name == monitor and setSelected(list,yPos) then
     return handleEvent(xPos,yPos)
   else
     return runMenu(list)
+  end
+end
+  
+runMenu = function (list)
+  if self.name ~= nil then
+    runMenuMonitor(list)
+  else
+    drawList(list)
+    --printTable(getWaitList())
+    local event, button, xPos, yPos = waitSignal("mouse_click")
+    if event == "mouse_click" and setSelected(list,yPos) then
+      return handleEvent(xPos,yPos)
+    else
+      return runMenu(list)
+    end
   end
 end
 
@@ -188,6 +204,7 @@ end
   funs.draw = function() drawList(items) end
   funs.run = function() runMenu(items) end
   funs.cycle = function() cycleMenu(items) end
+  funs.setTitle = function(_t) title = _t end 
   return funs
 end
 --END MENUS
@@ -219,14 +236,14 @@ function UI:yesNo(str)
   w.clear()
   w:printCentered(str,2)
   w.setBackgroundColor(colors.black)
-  w:printCentered("hello?",3)
+  --w:printCentered("hello?",3)
   self.redirect(parent)
   for k,v in pairs(w) do
-    if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,4) end
+   -- if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,4) end
   --term.write(tostring(k).."  ")
   end
   for k,v in pairs(parent) do
-    if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,5) end
+    --if k == "setBackgroundColor" then parent:indentLeft(tostring(v),0,5) end
   end
   
   while true do

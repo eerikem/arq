@@ -23,6 +23,8 @@ function printTable(_t)
   end
 end
 
+--Function redefined later
+writeStatus = function(str) print(str) end
 
 dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
@@ -37,7 +39,7 @@ local channels = {modem = "top", keeper= 1111, receive = 2222}
 
 local function addStatus(ui)
   local x, y = ui.getSize()
-  return window.create(ui.current(), 1, y - 2,x,2)
+  return window.create(ui.current(), 1, y - 2,x,3)
 end
 
 local status = addStatus(ui)
@@ -52,11 +54,12 @@ local function setStatusWindow(msg)
 end
 
 
-local function writeStatus(str)
+writeStatus = function(str)
   local x,y = ui.getCursorPos()
+  local w,h = status.getSize()
   local parent = ui.redirect(status)
-  term.clear()
-  term.setCursorPos(1, 1)
+  term.scroll(1)
+  term.setCursorPos(1,h)
   term.write(str)
   term.redirect(parent)
   status.redraw()
@@ -64,20 +67,19 @@ local function writeStatus(str)
 end
 
 
-local function getFile()
-  io.write("->")
-
-  local funs = {}
-  local file = io.read()
-  
-  printFile(file)
-end
-
 local printFile = function(file)
   local f = assert(io.open(shell.resolve(file)))
   print(f:read("*a"))
   f:close()
 end
+
+local function getFile()
+  io.write("->")
+  local funs = {}
+  local file = ui:read()
+  printFile(file)
+end
+
 
 local function handleKeeper()
   local key
@@ -111,11 +113,9 @@ local function handleKeeper()
     end
   end
   
-  runProcess(updateKeeper)
-  runProcess(listenKeeper)
+  runProcess(updateKeeper,"updateKeeper")
+  runProcess(listenKeeper, "listenKeeper")
 end
-  
-  
 
 
 local function queryUser(str)
@@ -128,15 +128,15 @@ local function queryUser(str)
   w.clear()
   w:printCentered(str,2)
   w.setBackgroundColor(colors.black)
-  --w:indentLeft(">",2,3)
   w.setCursorPos(3,3)
   w:wipe(#str,3,3)
-  w.setCursorBlink(true)
-  local r = io.read()
-  w.setCursorBlink(false)
   term.redirect(parent)
+  local r = ui:read()
+  --local r = io.read()
+  parent.restoreCursor()
+  w.clear()
+  w.redraw()
   return r
-  --parent.restoreCursor()
 end
 
 
@@ -152,6 +152,8 @@ end
 local function askQuit()
   if ui:yesNo("Do you wish to QUIT?") then
     shutdown()
+    --kill msg to turn off menu cycle
+    return "kill"
   end
 end
 
@@ -162,8 +164,7 @@ local function runFile(file)
   for n = 1, #root.uis do
     table.insert(uis,root.uis[n])
   end
-  --runProcess(root.main)
-  root.main()
+  runProcess(root.main,file)
 end
 
 local function loadProgram()
@@ -171,17 +172,23 @@ local function loadProgram()
   runFile(file)
 end
 
-local initKeeper = nil
+local initKeeper = "badarg"
+
+local airlock = function()
+  writeStatus("Running airlock")
+  runFile("arq/airlock.lua")
+end
 
 local arqMenu = {
   "Load Program", loadProgram,
+  "Read File", getFile,
+  "Run Airlock", airlock,
   "Initialize Keeper", initKeeper,
   "Shutdown ARQ", askQuit
 }
 
 
 local function eventListener()
-  --local args = {os.pullEvent()}
   while true do
     signal(os.pullEvent())
   end
@@ -191,30 +198,17 @@ end
 local function run()
   ui:clear()
   ui:printCentered("ArqiTeknologies",1,2)
-
-  --runFile("arq/airlock.lua")
-  
   local m = ui:readMenu(arqMenu)
-  runProcess(m.cycle())
-  --waitSeconds(1)
-  
-  --eventListener()
-  
-  local w,h = ui.getSize()
-  --ui:indentLeft("a message here",0,h-2)
-  --sleep(1)
-  --local r = queryUser("What would you like?")
-  --writeStatus("You asked for " .. r)
-  --sleep(1)
-  --askQuit()
+  m.cycle()
 end
 
 
 
 
 local function main()
-  run()
-  parallel.waitForAny(eventListener,wakerUpper)
+  runProcess(run,"arqRun")
+  runProcess(wakerUpper,"wakerUpper")
+  eventListener()
 end
 
 

@@ -61,8 +61,7 @@ function UI:terminate()
   self.clear()
   self.setCursorPos(1,1)
   self.write("thank you")
-  --TODO integrate with CC OS timing events
-  --waitSeconds(1)
+  waitSeconds(1)
   self.clear()
   self.setCursorPos(1,1)
 end
@@ -98,6 +97,49 @@ function UI:undoDelay(delay,h)
   end
 end
 
+function UI:read()
+  self.setCursorBlink(true)
+  local _x,_y = self.getCursorPos()
+  local buffer = {}
+  local n = 1
+  waitAny()
+  local event, key = coroutine.yield()
+  self.setCursorBlink(false)
+  --print("received: "..event)
+  while true do
+    if event == "key" then
+      key = keys.getName(key)
+      if key == "enter" then
+        self.setCursorBlink(false)
+        local r = buffer[1]
+        for i=2, n-1 do
+          r = r .. buffer[i]
+        end
+        writeStatus("Read: " .. r)
+        stopWait()
+        return r
+      elseif key == "backspace" then
+        local x, y = self.getCursorPos()
+        if x > _x then
+          x = x - 1
+          self.setCursorPos(x,y)
+          self.write(" ")
+          self.setCursorPos(x,y)
+          n = n - 1
+          buffer[n]=nil
+        end
+      end
+    end
+    if event == "char" then
+      buffer[n] = key
+      n = n + 1
+      self.write(key)
+    end
+    self.setCursorBlink(true)
+    event, key = coroutine.yield()
+  end
+end
+
 
 --MENUS
 function UI:readMenu(menu)
@@ -123,7 +165,6 @@ local function handleSelection(str, index, indent)
 end
 
 local function drawList(list)
-  --self.list = list
   if title ~= nil then 
   self:indentLeft(title,0,1) end
   local l = table.getn(list)
@@ -134,16 +175,19 @@ local function drawList(list)
       handleSelection(list[i], i, menuLeftIndent)
     end
   end
-  --self:writeStatus(self.status)
 end
 
-local function handleEvent(xPos,yPos)
+local function handleSelection()
+  local yPos = selected + menuIndent
   local v = values[selected]
-  if  type(v) == "function" then
-    v(self)
-  else if v == "BACK" then
+  if type(v) == "function" then
+    local msg = v(self)
+    --Return msg used to control menu
+    if msg == "kill" then running = false
+    return false end
+  elseif v == "BACK" then
     running = false
-  else if type(v) == "table" then
+  elseif type(v) == "table" then
     local m = self:readMenu(v)
     m.setTitle(items[selected])
     m.cycle()
@@ -152,18 +196,18 @@ local function handleEvent(xPos,yPos)
     self:indentLeft("Bad Item",menuLeftIndent+1,yPos)
     waitSeconds(1.5)
   end
-  end
-  end
+  return true
 end
 
 local function setSelected(list,yPos)
   local menuItems = table.getn(list)
   if yPos - menuIndent <= menuItems and yPos - menuIndent > 0
   then selected = yPos - menuIndent
+    drawList(list)
     return true
   else
     --self:writeStatus(yPos.." click")
-    --print (yPos.." click")
+    print (yPos.." click")
     return false
   end
 end
@@ -178,8 +222,9 @@ local runMenuMonitor = function (list)
   self.clear()
   drawList(list)
   local event, monitor, xPos, yPos = waitSignal("monitor_touch")
+  if event == "terminate" then self.clear() return false end
   if self.name == monitor and setSelected(list,yPos) then
-    return handleEvent(xPos,yPos)
+    return handleSelection()
   else
     return runMenu(list)
   end
@@ -191,12 +236,46 @@ runMenu = function (list)
   else
     drawList(list)
     --printTable(getWaitList())
-    local event, button, xPos, yPos = waitSignal("mouse_click")
-    if event == "mouse_click" and setSelected(list,yPos) then
-      return handleEvent(xPos,yPos)
-    else
-      return runMenu(list)
+    local co1 = runProcess(function()
+    local event, button, x, y
+    while true do 
+      event, button, x,y = waitSignal("mouse_click")
+      if event == "terminate" then break end
+      if setSelected(list,y) then
+        signal("list_selected")
+        break;
+      end
+      end
     end
+      , "Menu_Mouse_Lstnr")
+    local co2 = runProcess(function()
+    local event, key
+    while true do
+      event, key = waitSignal("key")
+      if event == "terminate" then break end
+      key = keys.getName(key)
+      if key == "up" then
+        if selected ~= 1 then
+          selected = selected - 1
+          drawList(list)
+        end
+      elseif key == "down" then
+        if selected ~= #items then
+          selected = selected + 1
+          drawList(list)
+        end
+      elseif key == "enter" then
+        signal("list_selected")
+        break;
+      end
+    end
+    end
+    , "Menu_Key_Lstnr")
+    
+    waitSignal("list_selected")
+    stop(co1)
+    stop(co2)
+    return handleSelection()
   end
 end
 
@@ -250,8 +329,10 @@ function UI:yesNo(str)
     local id, K = waitSignal("key")
     local key = keys.getName(K)
     if key == "y" then
+      w.clear()
       return true
     elseif key == "n" then
+      w.clear()
       return false
     end
   end

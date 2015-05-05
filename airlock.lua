@@ -33,15 +33,13 @@ local doors = {
 
 local delay = 2
 
-local unlock = function (door)
-  --print("unlock?")
+local open = function (door)
   if not locked then
     redstone.setBundledOutput(door.side,colors.combine(door.cable,redstone.getBundledOutput(door.side)))
   end
 end
 
-local lock = function (door)
-  --print("lock?")
+local close = function (door)
   redstone.setBundledOutput(door.side,colors.subtract(redstone.getBundledOutput(door.side),door.cable))
 end
 
@@ -64,18 +62,18 @@ local cycleAirlock = function (ui)
     insideDoor = doors[2]
     outsideDoor = doors[1]
   end
-  unlock(insideDoor)
+  open(insideDoor)
   ui:showDelay(delay,4)
-  lock(insideDoor)
+  close(insideDoor)
   ui:printCentered("CYCLING",3)
   ui:showDelayTwo(delay,4)
-  unlock(outsideDoor)
+  open(outsideDoor)
   ui:printCentered("LOCKING",3)
   ui:undoDelay(delay,4)
-  lock(outsideDoor)
+  close(outsideDoor)
   --ui:clearStatus()
   ui.menu.draw()
-  --print("end cycle")
+  writeStatus("Cycled Airlock")
   
   sealed = true
   else

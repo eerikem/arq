@@ -30,7 +30,9 @@ dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
 dofile("arq/ui.lua")
 
-
+local STATUS_HEIGHT = 3
+local LOGGING = false
+local log = "arq/log8"
 local ui = UI:new(term)
 local parentTerm = ui.current()
 local uis = {}
@@ -39,10 +41,12 @@ local channels = {modem = "top", keeper= 1111, receive = 2222}
 
 local function addStatus(ui)
   local x, y = ui.getSize()
-  return window.create(ui.current(), 1, y - 2,x,3)
+  local h = STATUS_HEIGHT
+  return window.create(ui.current(), 1, y - h + 1,x,h)
 end
 
 local status = addStatus(ui)
+
 
 local function setStatusWindow(msg)
   status.setVisible(true)
@@ -61,6 +65,11 @@ writeStatus = function(str)
   term.scroll(1)
   term.setCursorPos(1,h)
   term.write(str)
+  if LOGGING then
+    local f = fs.open(log,"a")
+    f.write(str .. "\n")
+    f.close(f)
+  end
   term.redirect(parent)
   status.redraw()
   ui.setCursorPos(x,y)
@@ -158,13 +167,17 @@ local function askQuit()
 end
 
 local function runFile(file)
-  dofile(shell.resolve(file))
-  assert(root.init,"Error, file is not a correct ARQ executable")
-  root.init(function() return writeStatus end)
-  for n = 1, #root.uis do
-    table.insert(uis,root.uis[n])
+  if fs.exists(file) then
+    dofile(file)
+    assert(root.init,"Error, file is not a correct ARQ executable")
+    root.init(function() return writeStatus end)
+    for n = 1, #root.uis do
+      table.insert(uis,root.uis[n])
+    end
+    runProcess(root.main,file)
+  else
+    writeStatus("Error: "..file.." not found")
   end
-  runProcess(root.main,file)
 end
 
 local function loadProgram()
@@ -203,15 +216,11 @@ local function run()
 end
 
 
-
-
 local function main()
   runProcess(run,"arqRun")
   runProcess(wakerUpper,"wakerUpper")
   eventListener()
 end
-
-
 
 
 main()

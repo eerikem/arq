@@ -13,19 +13,21 @@ local WAITING_ON_ANY = {}
 local INDEX = {}
 local COROUTINES = {}
 
+local id = 0
+
 local function printTable(_t)
   if _t == nil then
-    print "nil table!" 
+    writeStatus("nil table!") 
   else
     for k,v in pairs(_t) do
       if type(v)=="thread" then v = INDEX[v]
       elseif type(v)=="table" then
-        print(k.." plus table")
+        writeStatus(k.." contains")
         printTable(v)
-        print("end table "..k)
+        writeStatus("end "..k)
       elseif v==nil then v = "nil"
       else
-      print(k.." "..v)
+      writeStatus(k.." "..v)
       end
     end
   end
@@ -54,14 +56,16 @@ end
 
 local function resume(co, ...)
   --print "restarting starting co"
-  --print ("             "..INDEX[co].. " is1 "..coroutine.status(co))
-  local ok, param = coroutine.resume(co,unpack(arg))
-  --print ("             "..INDEX[co].. " is2 "..coroutine.status(co))
-  if not ok then
-    writeStatus(INDEX[co].. " not ok")
-    error( param )
-  else
-    return param
+  --writeStatus ("             "..INDEX[co].. " is1 "..coroutine.status(co))
+  if coroutine.status(co) ~= "dead" then
+    local ok, param = coroutine.resume(co,unpack(arg))
+    --writeStatus ("             "..INDEX[co].. " is2 "..coroutine.status(co))
+    if not ok then
+      writeStatus(INDEX[co].. " not ok")
+      error( param ,2)
+    else
+      return param
+    end
   end
 end
 
@@ -146,8 +150,8 @@ end
 
 function stop(_co)
   local signal = COROUTINES[_co]
-  if signal ~=nil then
-    --writeStatus(INDEX[_co].." being stopped")
+  --if signal ~=nil then
+  --writeStatus(INDEX[_co].." being stopped")
 
   if WAITING_ON_SIGNAL[signal] ~= nil then
     for n, co in ipairs(WAITING_ON_SIGNAL[signal]) do
@@ -160,12 +164,12 @@ function stop(_co)
     end
   end
   COROUTINES[_co]=nil
-  if coroutine.status(_co)~="dead" then
+  --end
+  
+  if coroutine.status(_co)=="suspended" then
     resume(_co,"terminate")
   end
-  
-  --printTable(WAITING_ON_SIGNAL)
-  end
+  --writeStatus(INDEX[_co].." is now "..coroutine.status(_co))
 end
 
 local function signalWaitAny(signalName,...)
@@ -188,7 +192,7 @@ function signal(signalName, ...)
     for _ in pairs(WAITING_ON_SIGNAL) do n = n + 1 end
     --writeStatus("There are "..n.." signals waiting")    
     if threads == nil then return end
-    --print ("threads waiting: " .. #threads)
+    --writeStatus ("threads waiting: " .. #threads)
     WAITING_ON_SIGNAL[signalName] = nil
     for _, co in ipairs(threads) do
         COROUTINES[co]= nil
@@ -198,9 +202,12 @@ end
 
 function runProcess(func,name)
     -- This function is just a quick wrapper to start a coroutine.
+    if not name then 
+      error("coroutine with no name",2) end
     local co = coroutine.create(func)
     
-    INDEX[co] = name
+    INDEX[co] = name .. "_"..id
+    id = id + 1
     
     return resume(co)
 end

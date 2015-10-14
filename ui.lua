@@ -158,23 +158,24 @@ function UI:readMenu(menu)
   
 local function handleSelection(str, index, indent)
   if selected == index then
-    self:indentLeft("["..str.."]", indent, index + menuIndent )
+    self:indentLeft("["..str.."] ", indent, index + menuIndent )
   else
     self:indentLeft(" "..str.."   ", indent, index + menuIndent )
   end
 end
 
-local function drawList(list)
+local function drawList()
   if title ~= nil then 
   self:indentLeft(title,0,1) end
-  local l = table.getn(list)
+  local l = table.getn(items)
   for i=1, l do
-    if type(list[i]) == "function" then
-      handleSelection(list[i](), i, menuLeftIndent)
+    if type(items[i]) == "function" then
+      handleSelection(items[i](), i, menuLeftIndent)
     else
-      handleSelection(list[i], i, menuLeftIndent)
+      handleSelection(items[i], i, menuLeftIndent)
     end
   end
+  waitSeconds(0.1)
 end
 
 local function handleSelection()
@@ -199,56 +200,72 @@ local function handleSelection()
   return true
 end
 
-local function setSelected(list,yPos)
-  local menuItems = table.getn(list)
+
+local function setSelected(yPos)
+  local menuItems = table.getn(items)
   if yPos - menuIndent <= menuItems and yPos - menuIndent > 0
   then selected = yPos - menuIndent
-    drawList(list)
+    drawList()
     return true
   else
-    --self:writeStatus(yPos.." click")
-    print (yPos.." click")
+    writeStatus (yPos.." click")
     return false
   end
 end
 
-cycleMenu = function (list)
+local cycleMenu = function ()
   while running do
-    runMenu(list)
+    runMenu()
   end
 end
 
-local runMenuMonitor = function (list)
-  self.clear()
-  drawList(list)
-  local event, monitor, xPos, yPos = waitSignal("monitor_touch")
-  if event == "terminate" then self.clear() return false end
-  if self.name == monitor and setSelected(list,yPos) then
-    return handleSelection()
-  else
-    return runMenu(list)
+local updater = function()
+  local co = runProcess(function()
+    local event
+    while true do
+      event = waitSignal("menuUpdate")
+      if event == "terminate" then
+        break
+      end
+      drawList()
+    end
   end
+  , "Menu_Update_Lstnr")
+  return co
 end
-  
-runMenu = function (list)
-  if self.name ~= nil then
-    runMenuMonitor(list)
-  else
-    drawList(list)
-    --printTable(getWaitList())
-    local co1 = runProcess(function()
+
+local runMonitor = function (myCo)
+  self.clear()
+  drawList()
+  local co = runProcess(function()
+    while true do
+      local event, monitor, xPos, yPos = waitSignal("monitor_touch")
+      if event == "terminate" then self.clear() break end
+      if self.name == monitor and setSelected(yPos) then
+        break
+      end
+    end
+    signal("list_selected",myCo)
+  end
+  , "Touch_Lstnr")
+  return co
+end
+
+local runComp = function(myCo)
+  drawList()
+  local co1 = runProcess(function()
     local event, button, x, y
     while true do 
       event, button, x,y = waitSignal("mouse_click")
       if event == "terminate" then break end
-      if setSelected(list,y) then
-        signal("list_selected")
-        break;
-      end
+      if setSelected(y) then
+        break
       end
     end
-      , "Menu_Mouse_Lstnr")
-    local co2 = runProcess(function()
+    signal("list_selected",myCo)
+  end
+  , "Menu_Mouse_Lstnr")
+  local co2 = runProcess(function()
     local event, key
     while true do
       event, key = waitSignal("key")
@@ -257,32 +274,59 @@ runMenu = function (list)
       if key == "up" then
         if selected ~= 1 then
           selected = selected - 1
-          drawList(list)
+          drawList()
         end
       elseif key == "down" then
         if selected ~= #items then
           selected = selected + 1
-          drawList(list)
+          drawList()
         end
       elseif key == "enter" then
-        signal("list_selected")
-        break;
+        break
       end
     end
-    end
-    , "Menu_Key_Lstnr")
-    
-    waitSignal("list_selected")
-    stop(co1)
-    stop(co2)
-    return handleSelection()
+    signal("list_selected",myCo)
   end
+  , "Menu_Key_Lstnr")
+  return co1, co2
+end
+
+runMenu = function ()
+  
+  local co = {}
+  local myCo = coroutine.running()
+  if self.name ~= nil then
+    --writeStatus("new ".. self.name .. " runMenu")
+     table.insert(co,runMonitor(myCo))
+  else
+    --writeStatus("new runMenu")
+    local co1, co2 = runComp(myCo)
+    table.insert(co,co1)
+    table.insert(co,co2)
+  end
+  table.insert(co,updater(myCo))
+  while true do
+    local event, target = waitSignal("list_selected")
+    if myCo == target then
+      if self.name then
+        --writeStatus(self.name.." received list_selected, stopping "..#co)
+      else
+        --writeStatus(event.." received, stopping "..#co)
+      end
+      for n, c in ipairs(co) do
+        --writeStatus("stop #"..n)
+        stop(c)
+      end
+      break
+    end
+  end
+  return handleSelection()
 end
 
   local funs = {}
-  funs.draw = function() drawList(items) end
-  funs.run = function() runMenu(items) end
-  funs.cycle = function() cycleMenu(items) end
+  funs.draw = function() drawList() end
+  funs.run = function() runMenu() end
+  funs.cycle = function() cycleMenu() end
   funs.setTitle = function(_t) title = _t end 
   return funs
 end

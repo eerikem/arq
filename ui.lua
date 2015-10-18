@@ -341,7 +341,7 @@ function UI:aquireMonitor(_name)
     ui.name = _name
     return ui
   else
-    error("Problem detecting " .. name)
+    error("Problem detecting a monitor")
   end
 end
 

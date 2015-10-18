@@ -23,12 +23,14 @@ function printTable(_t)
   end
 end
 
+
 --Function redefined later
 writeStatus = function(str) print(str) end
 
 dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
 dofile("arq/ui.lua")
+dofile("arq/bundle.lua")
 
 local STATUS_HEIGHT = 3
 local LOGGING = false

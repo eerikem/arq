@@ -19,29 +19,20 @@ local function lockMenuItem()
 end
 
 local doors = {
-  {
-    side="back",
-    cable=colors.white,
-    monitor="monitor_1"
-  },
-  {
-    side="back",
-    cable=colors.orange,
-    monitor="monitor_0"
+  BUNDLE:new("back",colors.white,"monitor_1"),
+  BUNDLE:new("back",colors.magenta,"monitor_0")
   }
-}
-
 
 local delay = 2
 
 local open = function (door)
   if not locked then
-    redstone.setBundledOutput(door.side,colors.combine(door.cable,redstone.getBundledOutput(door.side)))
+    door:enable()
   end
 end
 
 local close = function (door)
-  redstone.setBundledOutput(door.side,colors.subtract(redstone.getBundledOutput(door.side),door.cable))
+  door:disable()
 end
 
 
@@ -55,7 +46,7 @@ local cycleAirlock = function (ui)
     ui:printCentered("Airlock",1)
     ui:printCentered(" OPEN ",3)
     local insideDoor, outsideDoor
-    if doors[1].monitor == ui.name then
+    if doors[1]:getName() == ui.name then
       insideDoor = doors[1]
       outsideDoor = doors[2]
     else 
@@ -68,7 +59,7 @@ local cycleAirlock = function (ui)
     ui:printCentered("CYCLING",3)
     ui:showDelayTwo(delay,4)
     open(outsideDoor)
-    ui:printCentered("LOCKING",3)
+    ui:printCentered("LOCKED ",3)
     ui:undoDelay(delay,4)
     close(outsideDoor)
     --ui:clearStatus()
@@ -84,11 +75,11 @@ end
 local cycleLock2 = function (ui)
     ui.clear()
     ui:printCentered("Airlock",1)
-    ui:printCentered(" OPEN ",3)
+    ui:printCentered("LOCKED ",3)
     ui:showDelay(delay,4)
     ui:printCentered("CYCLING",3)
     ui:showDelayTwo(delay,4)
-    ui:printCentered("LOCKING",3)
+    ui:printCentered(" OPEN  ",3)
     ui:undoDelay(delay,4)
     ui.menu.draw()
 end
@@ -139,7 +130,7 @@ end
 airlock.init = function()
   local runs = {}
   for n=1, #doors do
-    local ui = UI:aquireMonitor(doors[n].monitor)
+    local ui = UI:aquireMonitor(doors[n]:getName())
     table.insert(uis,ui)
     ui.clear()
   end

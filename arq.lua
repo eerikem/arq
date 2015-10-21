@@ -32,7 +32,7 @@ dofile("arq/WaitSupport.lua")
 dofile("arq/ui.lua")
 dofile("arq/bundle.lua")
 
-local STATUS_HEIGHT = 3
+local STATUS_HEIGHT = 6
 local LOGGING = false
 local log = "arq/log8"
 local ui = UI:new(term)
@@ -212,6 +212,7 @@ end
 
 local function run()
   ui:clear()
+  ui:aquireMonitors()
   ui:printCentered("ArqiTeknologies",1,2)
   local m = ui:readMenu(arqMenu)
   m.cycle()

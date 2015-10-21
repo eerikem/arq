@@ -7,6 +7,8 @@
 
 UI = {title = "ArqiTeknologies"}
 
+local monitors = {}
+
 function UI:new(o)
   --print "hello"
   local o = o or {}
@@ -332,20 +334,47 @@ end
 end
 --END MENUS
 
-
+function UI:aquireMonitors()
+  for n,sName in ipairs( peripheral.getNames()) do
+    if peripheral.getType( sName ) == "monitor" then
+      local wrapped = peripheral.wrap( sName )
+      if not monitors[sName] then
+        monitors[sName]=wrapped
+      end
+    end
+  end
+end
 
 function UI:aquireMonitor(_name)
-  local mon = peripheral.find("monitor", function(name,object) return name == _name end)
+  UI:aquireMonitors()
+  local mon = monitors[_name]
+  writeStatus(_name)
   if mon then
-    local ui = UI:new(mon)
-    ui.name = _name
-    return ui
+    if mon.inUse then
+      error(_name.." is in use.",2)
+    else
+      mon.inUse = true
+      local ui = UI:new(mon)
+      ui.name = _name
+      return ui
+    end
   else
     error("Problem detecting a monitor")
   end
 end
 
-
+function UI:aquireMonitor()
+  UI:aquireMonitors()
+  for name,mon in pairs(monitors) do
+    if not mon.inUse then
+      local ui = UI:new(mon)
+      ui.name = name
+      mon.inUse = true
+      return ui
+    end
+  end
+  return nil
+end
 
 function UI:yesNo(str)
   local w,h = self.getSize()

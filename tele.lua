@@ -1,13 +1,13 @@
 local teleporter = {}
 root = teleporter
-
+local title = 'Teleport Control'
 local TELE_DELAY = 1
+local uis = {}
+teleporter.uis = uis
 
 INDEX = 0
 
-local ui = UI:new(term)
-local parentTerm = ui.current()
-local uis = {}
+local ui
 
 local open = false
 
@@ -33,10 +33,13 @@ end
 local function detector()
   while true do
     local event = waitSignal("redstone")
+    writeStatus("rs signal: "..rs.getBundledInput("bottom"))
     if event == "terminate" then return end
     if cables.detector:isOn() then
+      writeStatus("Enabled lights ")
       cables.lights:enable()
     else
+      writeStatus("Disabled lights")
       cables.lights:disable()
     end
   end
@@ -93,27 +96,17 @@ local root = {
   "Shutdown", exit
   }
 
-local function eventListener()
-  while true do
-    signal(os.pullEvent())
-  end
-end
-      
-local function run()
-  ui:clear()
-  ui:printCentered("ArqiTeknologies",1,2)
-  local m = ui:readMenu(root)
-  
-  testCable(cables.doors)
-  runProcess(m.cycle,"teleporter_menu")
-  runProcess(detector,"teleDetector")
+teleporter.init = function()
+  writeStatus("Setting "..cables.piston.side .. " to 0")
+  rs.setBundledOutput(cables.piston.side,0)
+  ui = UI:aquireMonitor("monitor_28")
+  table.insert(uis,ui)
+  ui.clear()
 end
  
-local function main()
-  rs.setBundledOutput(cables.piston.side,0)
-  runProcess(run,"teleporter")
-  runProcess(wakerUpper,"wakerUpper")
-  eventListener()
+teleporter.main = function()
+  local m = ui:readMenu(root)
+  local co1 = runProcess(m.cycle,"teleporter_main")
+  local co2 = runProcess(detector,"teleDetector")
+  return co1, co2
 end
-
-main()

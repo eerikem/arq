@@ -38,7 +38,7 @@ function BUNDLE:disable()
 end
 
 function BUNDLE:isOn()
-  return rs.getBundledInput(self.side,self.cable)
+  return colors.test(rs.getBundledInput(self.side),self.cable)
 end
 
 function BUNDLE:getName()

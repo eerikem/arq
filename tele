@@ -42,8 +42,8 @@ local function detector()
 end
 
 local function doorMenu()
-  if open then return "CLOSE Teleport Bay"
-  else return "OPEN  Teleport Bay"
+  if open then return "CLOSE Bay"
+  else return "OPEN  Bay"
   end
 end
 
@@ -99,7 +99,7 @@ teleporter.init = function()
   
   rs.setBundledOutput(cables.piston.side,0)
 end
- 
+
 teleporter.main = function()
   local m = uis[1]:readMenu(root)
   m.setTitle(title)

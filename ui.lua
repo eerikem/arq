@@ -15,6 +15,17 @@ function UI:new(o)
   return o
 end
 
+local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
+local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
+local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+
+local function exec(cmd)
+  if commands then
+    commands.execAsync(cmd)
+  else
+    writeStatus("Warning: Not a command computer")
+  end
+end
 
 function UI:wipe(n,x,y)
   local m = 0
@@ -274,12 +285,18 @@ local runComp = function(myCo)
       if key == "up" then
         if selected ~= 1 then
           selected = selected - 1
+          exec(tapSound)
           drawList()
+        else
+          exec(errorSound)
         end
       elseif key == "down" then
         if selected ~= #items then
           selected = selected + 1
+          exec(tapSound)
           drawList()
+        else
+          exec(errorSound)
         end
       elseif key == "enter" then
         break
@@ -307,6 +324,7 @@ runMenu = function ()
   table.insert(co,updater(myCo))
   while true do
     local event, target = waitSignal("list_selected")
+    exec(selectSound)
     if myCo == target then
       if self.name then
         --writeStatus(self.name.." received list_selected, stopping "..#co)

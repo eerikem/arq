@@ -27,6 +27,8 @@ local function exec(cmd)
   end
 end
 
+UI.exec = exec
+
 function UI:wipe(n,x,y)
   local m = 0
   local a,b = self.getCursorPos()
@@ -324,8 +326,8 @@ runMenu = function ()
   table.insert(co,updater(myCo))
   while true do
     local event, target = waitSignal("list_selected")
-    exec(selectSound)
     if myCo == target then
+      exec(selectSound)
       if self.name then
         --writeStatus(self.name.." received list_selected, stopping "..#co)
       else
@@ -392,10 +394,13 @@ function UI:yesNo(str)
     local key = keys.getName(K)
     if key == "y" then
       w.clear()
+      exec(selectSound)
       return true
     elseif key == "n" then
+      exec(tapSound)
       w.clear()
       return false
     end
+    exec(errorSound)
   end
 end

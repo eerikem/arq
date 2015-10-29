@@ -149,6 +149,7 @@ local function queryUser(str)
   parent.restoreCursor()
   w.clear()
   w.redraw()
+  --UI:exec(selectSound)
   return r
 end
 

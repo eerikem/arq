@@ -15,6 +15,19 @@ function UI:new(o)
   return o
 end
 
+local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
+local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
+local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+
+local function exec(cmd)
+  if commands then
+    commands.execAsync(cmd)
+  else
+    writeStatus("Warning: Not a command computer")
+  end
+end
+
+UI.exec = exec
 
 function UI:wipe(n,x,y)
   local m = 0
@@ -274,12 +287,18 @@ local runComp = function(myCo)
       if key == "up" then
         if selected ~= 1 then
           selected = selected - 1
+          exec(tapSound)
           drawList()
+        else
+          exec(errorSound)
         end
       elseif key == "down" then
         if selected ~= #items then
           selected = selected + 1
+          exec(tapSound)
           drawList()
+        else
+          exec(errorSound)
         end
       elseif key == "enter" then
         break
@@ -308,6 +327,7 @@ runMenu = function ()
   while true do
     local event, target = waitSignal("list_selected")
     if myCo == target then
+      exec(selectSound)
       if self.name then
         --writeStatus(self.name.." received list_selected, stopping "..#co)
       else
@@ -341,7 +361,7 @@ function UI:aquireMonitor(_name)
     ui.name = _name
     return ui
   else
-    error("Problem detecting " .. name)
+    error("Problem detecting a monitor")
   end
 end
 
@@ -374,10 +394,13 @@ function UI:yesNo(str)
     local key = keys.getName(K)
     if key == "y" then
       w.clear()
+      exec(selectSound)
       return true
     elseif key == "n" then
+      exec(tapSound)
       w.clear()
       return false
     end
+    exec(errorSound)
   end
 end

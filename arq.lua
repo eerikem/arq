@@ -23,19 +23,23 @@ function printTable(_t)
   end
 end
 
+
 --Function redefined later
 writeStatus = function(str) print(str) end
 
 dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
 dofile("arq/ui.lua")
+dofile("arq/bundle.lua")
+local TELEFILE = "arq/tele.lua"
 
-local STATUS_HEIGHT = 3
+local STATUS_HEIGHT = 5
 local LOGGING = false
 local log = "arq/log8"
 local ui = UI:new(term)
 local parentTerm = ui.current()
 local uis = {}
+local coroutines = {}
 
 local channels = {modem = "top", keeper= 1111, receive = 2222}
 
@@ -145,6 +149,7 @@ local function queryUser(str)
   parent.restoreCursor()
   w.clear()
   w.redraw()
+  --UI:exec(selectSound)
   return r
 end
 
@@ -166,6 +171,21 @@ local function askQuit()
   end
 end
 
+local function register(co,...)
+  local _t={}
+  for i,c in ipairs(arg) do
+    table.insert(_t,c)
+  end
+  if not coroutines[co] then
+    coroutines[co]=_t
+  else
+    writeStatus("Additional coroutines added to "..co)
+    for i,c in ipairs(_t) do
+      table.insert(coroutines[co][i],c)
+    end
+  end
+end
+
 local function runFile(file)
   if fs.exists(file) then
     dofile(file)
@@ -174,7 +194,7 @@ local function runFile(file)
     for n = 1, #root.uis do
       table.insert(uis,root.uis[n])
     end
-    runProcess(root.main,file)
+    register(file,runProcess(root.main,file))
   else
     writeStatus("Error: "..file.." not found")
   end
@@ -192,11 +212,27 @@ local airlock = function()
   runFile("arq/airlock.lua")
 end
 
+local teleMenu = function()
+  if coroutines[TELEFILE] then
+    return "Halt Teleporter"
+  else
+    return "Start Teleporter"
+  end
+end
+
+local teleporter = function()
+  if coroutines[TELEFILE] then
+    writeStatus("Shutting down Teleporter")
+    stop(coroutines[TELEFILE])
+  else
+    writeStatus("Running Teleporter")
+    runFile(TELEFILE)
+  end
+end
+
 local arqMenu = {
   "Load Program", loadProgram,
-  "Read File", getFile,
-  "Run Airlock", airlock,
-  "Initialize Keeper", initKeeper,
+  teleMenu, teleporter,
   "Shutdown ARQ", askQuit
 }
 

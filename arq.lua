@@ -177,7 +177,7 @@ local function register(co,...)
     table.insert(_t,c)
   end
   if not coroutines[co] then
-    coroutines[co]=_t
+    coroutines[co]={_t}
   else
     writeStatus("Additional coroutines added to "..co)
     for i,c in ipairs(_t) do
@@ -220,6 +220,11 @@ local teleMenu = function()
   end
 end
 
+local attack = function()
+  writeStatus("Launching Attack!")
+  runFile("arq/attack.lua")
+end
+
 local teleporter = function()
   if coroutines[TELEFILE] then
     writeStatus("Shutting down Teleporter")
@@ -230,9 +235,17 @@ local teleporter = function()
   end
 end
 
+local function pulse()
+  local cable = BUNDLE:new("back",colors.white,"pulse")
+  cable:pulse()
+end
+
 local arqMenu = {
   "Load Program", loadProgram,
+  "Run Airlock", airlock,
   teleMenu, teleporter,
+  "Launch Attack", attack,
+  "Pulse", pulse,
   "Shutdown ARQ", askQuit
 }
 
@@ -246,6 +259,7 @@ end
 
 local function run()
   ui:clear()
+  ui:aquireMonitors()
   ui:printCentered("ArqiTeknologies",1,2)
   local m = ui:readMenu(arqMenu)
   m.cycle()

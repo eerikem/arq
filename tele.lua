@@ -13,13 +13,13 @@ local TELE_SOUND = "/playsound frontierdevelopment:event.event_teleport @a 268 6
 local open = false
 
 local cables = {
-  admin = BUNDLE:new("bottom",colors.yellow,"AdminShortcut"),
-  doors = BUNDLE:new("bottom",colors.magenta,"ChamberDoors"),
-  piston = BUNDLE:new("bottom",colors.orange,"PistonDrop"),
-  light = BUNDLE:new("bottom",colors.white,"BackLight"),
-  lights = BUNDLE:new("bottom",colors.lime,"OverheadLights"),
-  detector = BUNDLE:new("bottom",colors.lightBlue,"PlayerDetector"),
-  teleport = BUNDLE:new("bottom",colors.pink,"TeleportCmd")
+  admin = BUNDLE:new("back",colors.yellow,"AdminShortcut"),
+  doors = BUNDLE:new("back",colors.magenta,"ChamberDoors"),
+  piston = BUNDLE:new("back",colors.orange,"PistonDrop"),
+  light = BUNDLE:new("back",colors.white,"BackLight"),
+  lights = BUNDLE:new("back",colors.lime,"OverheadLights"),
+  detector = BUNDLE:new("back",colors.lightBlue,"PlayerDetector"),
+  teleport = BUNDLE:new("back",colors.pink,"TeleportCmd")
   }
 
 local function toggleDoors()
@@ -72,7 +72,7 @@ end
 local function detector()
   while true do
     local event = waitSignal("redstone")
-    writeStatus("rs signal: "..rs.getBundledInput("bottom"))
+    writeStatus("rs signal: "..rs.getBundledInput("back"))
     if event == "terminate" then return end
     if cables.detector:isOn() and open then
       writeStatus("Closing Door!")
@@ -132,7 +132,7 @@ teleporter.init = function()
   writeStatus("Setting "..cables.piston.side .. " to 0")
   rs.setBundledOutput(cables.piston.side,0)
   cables.lights:enable()
-  ui = UI:aquireMonitor("monitor_28")
+  ui = UI:aquireMonitor()
   table.insert(uis,ui)
   ui.clear()
 end

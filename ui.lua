@@ -7,6 +7,8 @@
 
 UI = {title = "ArqiTeknologies"}
 
+local monitors = {}
+
 function UI:new(o)
   --print "hello"
   local o = o or {}
@@ -19,7 +21,7 @@ local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
 local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
 local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
 
-local function exec(cmd)
+function exec(cmd)
   if commands then
     commands.execAsync(cmd)
   else
@@ -352,20 +354,53 @@ end
 end
 --END MENUS
 
-
-
-function UI:aquireMonitor(_name)
-  local mon = peripheral.find("monitor", function(name,object) return name == _name end)
-  if mon then
-    local ui = UI:new(mon)
-    ui.name = _name
-    return ui
-  else
-    error("Problem detecting a monitor")
+function UI:aquireMonitors()
+  for n,sName in ipairs( peripheral.getNames()) do
+    if peripheral.getType( sName ) == "monitor" then
+      local wrapped = peripheral.wrap( sName )
+      if not monitors[sName] then
+        monitors[sName]=wrapped
+      end
+    end
   end
 end
 
+function UI:aquireAnyMonitor()
+  UI:aquireMonitors()
+  for name,mon in pairs(monitors) do
+    if not mon.inUse then
+      local ui = UI:new(mon)
+      ui.name = name
+      mon.inUse = true
+      writeStatus("Aquired "..ui.name)
+      return ui
+    end
+  end
+  error("No monitors available!",2)
+  return nil
+end
 
+function UI:aquireMonitor(_name)
+  if not _name then return UI:aquireAnyMonitor()
+  else
+    UI:aquireMonitors()
+    writeStatus("Searching for ".._name)
+    local mon = monitors[_name]
+    if mon then
+      if mon.inUse then
+        error(_name.." is in use.",2)
+      else
+        mon.inUse = true
+        local ui = UI:new(mon)
+        ui.name = _name
+        writeStatus("Aquired "..ui.name)
+        return ui
+      end
+    else
+      error("Problem detecting a monitor")
+    end
+  end
+end
 
 function UI:yesNo(str)
   local w,h = self.getSize()

@@ -20,7 +20,7 @@ end
 
 local doors = {
   BUNDLE:new("back",colors.white,"monitor_1"),
-  BUNDLE:new("back",colors.magenta,"monitor_0")
+  BUNDLE:new("back",colors.magenta,"monitor_3")
   }
 
 local delay = 2

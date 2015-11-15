@@ -31,6 +31,9 @@ dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
 dofile("arq/ui.lua")
 dofile("arq/bundle.lua")
+dofile("arq/group.lua")
+
+
 local TELEFILE = "arq/tele.lua"
 
 local STATUS_HEIGHT = 5
@@ -235,17 +238,12 @@ local teleporter = function()
   end
 end
 
-local function pulse()
-  local cable = BUNDLE:new("back",colors.white,"pulse")
-  cable:pulse()
-end
 
 local arqMenu = {
   "Load Program", loadProgram,
-  "Run Airlock", airlock,
-  teleMenu, teleporter,
-  "Launch Attack", attack,
-  "Pulse", pulse,
+  --"Run Airlock", airlock,
+  --teleMenu, teleporter,
+  "Enable Attack", attack,
   "Shutdown ARQ", askQuit
 }
 
@@ -274,5 +272,3 @@ end
 
 
 main()
---ui:drawHeader()
---ui:indentLeft("Welcome to ARQ",3,0)

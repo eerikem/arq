@@ -49,8 +49,8 @@ function BUNDLE:pulse()
 end
 
 function BUNDLE:flick(low, high,low2,high2)
-  local ui = UI:aquireAnyMonitor()
-  ui.clear()
+  --local ui = UI:aquireAnyMonitor()
+  --ui.clear()
   while self.flickering do
   -- term.redirect(ui)
   -- print("enable")

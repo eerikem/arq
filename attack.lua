@@ -25,13 +25,13 @@ local function define(_time, _desc, _cmd)
 end
 
 local events = {
-  --define(0, "Play Sound", "/playsound frontierdevelopment:event.event_attackmain @a[r=55] -183 46 -1501 500 1.0 1"),
+  define(0, "Play Sound", "/playsound frontierdevelopment:event.event_attackmain @a[r=55] -183 46 -1501 500 1.0 1"),
   define(0, "Place Block", "/setblock -101 36 -7 0"),
   define(0, "Set Spawnpoint", "/spawnpoint @a -97 14 -7"),
   define(1, "Disable Redstone", function() cables.orange:disable() end),
   define(1, "Place Block", "/setblock -100 34 -7 875 3"),
   define(7, "Redstone Pulse", function() cables.magenta:pulse() end),
-  --define(14, "Effect", "/effect @a 9 15"),
+  define(14, "Effect", "/effect @a 9 15"),
   define(15, "Redstone Flicker", function() cables.orange:flicker(0,1,0.7,1.6) end),
   define(19, "Redstone Pulse", function() cables.lightBlue:pulse() end),
   define(19, "Command", "/noppes clone spawn attack_mainfaller 2 -98,44,-6"),

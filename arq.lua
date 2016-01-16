@@ -4,6 +4,7 @@
 --
 --Author: ArqiTek
 --Copyright 2250
+local args = {...}
 
 
 function printTable(_t)
@@ -46,6 +47,7 @@ local coroutines = {}
 local supervisor
 local channels = {modem = "top", keeper= 1111, receive = 2222}
 
+
 local function addStatus(ui)
   local x, y = ui.getSize()
   local h = STATUS_HEIGHT
@@ -53,17 +55,6 @@ local function addStatus(ui)
 end
 
 local status = addStatus(ui)
-
-
-local function setStatusWindow(msg)
-  status.setVisible(true)
-  local parent = term.redirect(status)
-  term.clear()
-  term.write(msg)
-  status.redraw()
-  term.redirect(parent)
-end
-
 
 writeStatus = function(str)
   local x,y = ui.getCursorPos()
@@ -199,6 +190,7 @@ local function register(co,...)
 end
 
 local function runFile(file)
+  if not fs.exists(file) then file = "arq/"..file end
   if fs.exists(file) then
     dofile(file)
     assert(root.init,"Error, file is not a correct ARQ executable")
@@ -264,7 +256,7 @@ local function test()
 end
 
 local arqMenu = {
-  "Test", test,
+  --"Test", test,
   "Load Program", loadProgram,
   "Run Airlock", airlock,
   --teleMenu, teleporter,
@@ -282,18 +274,24 @@ end
 
 local function run()
   ui:clear()
+  status.redraw()
   ui:aquireMonitors()
   ui:printCentered("ArqiTeknologies",1,2)
   local m = ui:readMenu(arqMenu)
   m.cycle()
-  writeStatus("here?")
 end
 
 
 local function main()
   supervisor = runProcess(supervisorMain,"arq_supervisor")
-  runProcess(run,"arqRun")
+  writeStatus("Running1")
   runProcess(wakerUpper,"wakerUpper",supervisor)
+  writeStatus("Running 2")
+  for i,file in ipairs(args) do
+    writeStatus("Running "..file.." "..i)
+    runFile(file)
+  end
+  runProcess(run,"arq_run")
   eventListener()
 end
 

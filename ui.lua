@@ -31,6 +31,10 @@ end
 
 UI.exec = exec
 
+function UI:beep()
+  exec(errorSound)
+end
+
 function UI:wipe(n,x,y)
   local m = 0
   local a,b = self.getCursorPos()

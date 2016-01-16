@@ -36,14 +36,14 @@ dofile("arq/group.lua")
 
 local TELEFILE = "arq/tele.lua"
 
-local STATUS_HEIGHT = 5
+local STATUS_HEIGHT = 12
 local LOGGING = false
 local log = "arq/log8"
 local ui = UI:new(term)
 local parentTerm = ui.current()
 local uis = {}
 local coroutines = {}
-
+local supervisor
 local channels = {modem = "top", keeper= 1111, receive = 2222}
 
 local function addStatus(ui)
@@ -156,6 +156,15 @@ local function queryUser(str)
   return r
 end
 
+local function supervisorMain()
+  while true do
+    local event, msg = coroutine.yield()
+    if event == "error_msg" then
+    --writeStatus ("Received error: "..msg)
+      error(msg)
+    end
+  end
+end
 
 local function shutdown()
   for n = 1, #uis do
@@ -197,7 +206,9 @@ local function runFile(file)
     for n = 1, #root.uis do
       table.insert(uis,root.uis[n])
     end
-    register(file,runProcess(root.main,file))
+        
+    register(file,runProcess(root.main,file,supervisor))
+    
   else
     writeStatus("Error: "..file.." not found")
   end
@@ -238,10 +249,24 @@ local teleporter = function()
   end
 end
 
+local function test()
+  local T = group.group(95,78,40,101,78,35)
+  group.insert(T,97,80,38)
+  writeStatus("Grouped: "..table.maxn(T))
+  local n
+  runProcess(function ()
+    local B = commands.getBlockInfo(T[1].x,T[1].y,T[1].z)
+    writeStatus("hello "..type(B)) end,"BlockInfo")
+  waitSignal("task_complete")
+  writeStatus("Found: "..n)
+  --local block = queryUser("What block do you want?")
+  --group.execute(T,"/setblock %d %d %d "..block)
+end
 
 local arqMenu = {
+  "Test", test,
   "Load Program", loadProgram,
-  --"Run Airlock", airlock,
+  "Run Airlock", airlock,
   --teleMenu, teleporter,
   "Enable Attack", attack,
   "Shutdown ARQ", askQuit
@@ -261,12 +286,14 @@ local function run()
   ui:printCentered("ArqiTeknologies",1,2)
   local m = ui:readMenu(arqMenu)
   m.cycle()
+  writeStatus("here?")
 end
 
 
 local function main()
+  supervisor = runProcess(supervisorMain,"arq_supervisor")
   runProcess(run,"arqRun")
-  runProcess(wakerUpper,"wakerUpper")
+  runProcess(wakerUpper,"wakerUpper",supervisor)
   eventListener()
 end
 

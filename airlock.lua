@@ -40,8 +40,6 @@ local cycleAirlock = function (ui)
   if not locked and sealed then
     sealed = false
     writeStatus("Cycling Airlock")
-    
-    
     ui.clear()
     ui:printCentered("Airlock",1)
     ui:printCentered(" OPEN ",3)
@@ -119,11 +117,13 @@ local menu = {
 local cycleMenus = function()
   while true do
     local event, ui = waitSignal("cycle")
-    local ui2
-    if uis[1] == ui then ui2 = uis[2]
-    else ui2 = uis[1] end
-    runProcess(function() cycleAirlock(ui) end,"DoorCycler1" )
-    runProcess(function() cycleLock2(ui2) end,"DoorCycler2" )
+    if ui then
+      local ui2
+      if uis[1] == ui then ui2 = uis[2]
+      else ui2 = uis[1] end
+      runProcess(function() cycleAirlock(ui) end,"DoorCycler1" )
+      runProcess(function() cycleLock2(ui2) end,"DoorCycler2" )
+    end
   end
 end
 
@@ -132,7 +132,9 @@ airlock.init = function()
   for n=1, #doors do
     local ui = UI:aquireMonitor(doors[n]:getName())
     table.insert(uis,ui)
+    ui.setBackgroundColor(colors.orange)
     ui.clear()
+    ui.setBackgroundColor(colors.black)
   end
 end
 

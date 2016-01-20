@@ -17,7 +17,8 @@ local cables = {
   orange = BUNDLE:new(CABLE_SIDE,colors.orange,"Orange"),
   magenta = BUNDLE:new(CABLE_SIDE,colors.magenta,"MagentaPulse"),
   lightBlue = BUNDLE:new(CABLE_SIDE,colors.lightBlue,"LightBluePulse"),
-  lime = BUNDLE: new(CABLE_SIDE,colors.lime,"Lime")
+  lime = BUNDLE:new(CABLE_SIDE,colors.lime,"Lime"),
+  flicker = BUNDLE:new(CABLE_SIDE,colors.pink,"Flickering")
   }
   
 local function define(_time, _desc, _cmd)
@@ -32,15 +33,15 @@ local events = {
   define(1, "Place Block", "/setblock -100 34 -7 875 3"),
   define(7, "Redstone Pulse", function() cables.magenta:pulse() end),
   define(14, "Effect", "/effect @a 9 15"),
-  define(15, "Redstone Flicker", function() cables.orange:flicker(0,1,0.7,1.6) end),
+  define(15, "Redstone Flicker", function() cables.flicker:enable() end),
   define(19, "Redstone Pulse", function() cables.lightBlue:pulse() end),
   define(19, "Command", "/noppes clone spawn attack_mainfaller 2 -98,44,-6"),
   define(20, "Command", "/noppes clone spawn attack_mainfaller 2 -99,43,-8"),
   define(22, "Command", "/noppes clone spawn attack_mainfaller 2 -96,45,-8"),
   define(24, "Command", "/noppes clone spawn attack_mainfaller 2 -97,43,-7"),
   define(26, "Command", "/noppes clone spawn attack_mainfaller 2 -98,44,-6"),
-  define(26, "Disable Redstone Flicker", function() cables.orange:stopFlicker() end),
-  define(30, "Place Block", "/setblock -100 34 -7 0"),
+  define(26, "Disable Redstone Flicker", function() cables.flicker:disable() end),
+  define(28, "Place Block", "/setblock -100 34 -7 0"),
   define(35, "Setblock Array", function() group.execute(collection,"/setblock %d %d %d 13") end),
   define(40, "Enable Redstone", function() cables.lime:enable() end)
 }
@@ -81,6 +82,7 @@ end
 
 attack.init = function()
   rs.setBundledOutput(CABLE_SIDE,0)
+  cables.orange:enable()
   table.insert(uis,ui)
 end
 

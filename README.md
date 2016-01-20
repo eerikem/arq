@@ -1,2 +1,0 @@
-# arq
-The ARQ

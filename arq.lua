@@ -28,6 +28,7 @@ end
 --Function redefined later
 writeStatus = function(str) print(str) end
 
+VM = dofile("server/vm.lua")
 dofile("arq/WaitSupport.lua")
 --os.loadAPI("arq/perf")
 dofile("arq/ui.lua")
@@ -62,7 +63,14 @@ writeStatus = function(str)
   local parent = ui.redirect(status)
   term.scroll(1)
   term.setCursorPos(1,h)
-  term.write(str)
+  if string.find(string.lower(str),'error') then
+    local c = term.getTextColor()
+    term.setTextColor(colors.red)
+    print(str)
+    term.setTextColor(c)
+  else
+    term.write(str)
+  end
   if LOGGING then
     local f = fs.open(log,"a")
     f.write(str .. "\n")
@@ -73,6 +81,7 @@ writeStatus = function(str)
   ui.setCursorPos(x,y)
 end
 
+VM.log = writeStatus
 
 local printFile = function(file)
   local f = assert(io.open(shell.resolve(file)))

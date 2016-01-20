@@ -84,7 +84,7 @@ end
 
 local lockPeripherals = function (ui)
   --writeStatus("lockPerf")
-  --error("Called lockPerf",2)
+  error("Called lockPerf some long message",2)
   locked = not locked
   signal("menuUpdate")
 end

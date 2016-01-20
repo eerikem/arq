@@ -11,7 +11,7 @@ local WAITING_ON_SIGNAL = {}
 local WAITING_ON_ANY = {}
 
 --List of all coroutines their names, parent, children and supervisor.
-local INDEX = {}
+
 local NAME_INDEX= {}
 --List of coroutine id's waiting on an event
 local COROUTINES = {}
@@ -46,7 +46,7 @@ end
 
 function waitSeconds(seconds)
   -- Grab a reference to the current running coroutine.
-  local co = coroutine.running()
+  local co = VM.running()
 
   -- If co is nil, that means we're on the main process, which isn't a coroutine and can't yield
   assert(co ~= nil, "The main thread cannot wait!")
@@ -58,83 +58,27 @@ function waitSeconds(seconds)
 
 
   -- And suspend the process
-  return coroutine.yield(co)
-end
-
-local function delete(co) 
---OVERIDE
-end
-
-function stop(_co)
-  writeStatus("stopping: "..INDEX[_co].name)
-  if _co == nil then error("_co is nil", 2) end
-  if INDEX[_co].parent == nil then error("the parent is nil",2) end
-  if INDEX[INDEX[_co].parent] ~= nil then
-
-    if INDEX[_co].parent ~=nil then
-      local children = INDEX[INDEX[_co].parent].children
-
-      if children.parent ~= "nil" then
-        --remove from parent
-        for n,c in ipairs(children) do
-          if c==_co then table.remove(children,n) break end
-        end
-      else
-        writeStatus("Warning: deleting main thread?")
-      end
-
-      delete(_co)
-    end
-  end
-end
-
-local function handler(co,ok,...)
-  local c = INDEX[co]
-  if not ok then
-    if not c then error(NAME_INDEX[co].." no longer indexed!",2) end
-    writeStatus(c.name.. " not ok")
-    writeStatus(unpack(arg))
-    if c.supervisor then
-      coroutine.resume(c.supervisor,"error_msg",unpack(arg))
-    else
-      stop(co)
-      error( unpack(arg),3)
-    end
-  else
-    return unpack(arg)
-  end
+  return VM.receive()
 end
 
 
 local function resume(co, ...)
-  --print "restarting starting co"
-  --writeStatus ("             "..INDEX[co].. " is1 "..coroutine.status(co))
-  if coroutine.status(co) ~= "dead" or INDEX[co] ~= nil then
-    return handler(co,coroutine.resume(co,unpack(arg)))
-    --writeStatus ("             "..INDEX[co].. " is2 "..coroutine.status(co))
-  else
-    writeStatus("WARNING: attempt to resume dead coroutine "..NAME_INDEX[co])
-    return true
-  end
+  VM.send(co,unpack(arg))
 end
 
 function wakerUpper()
   while true do
     local event, time = waitSignal("timer")
-    --print ("waking all at "..time)
     local threadsToWake = {}
     for co, wakeupTime in pairs(WAITING_ON_TIME) do
-      --print ("wakeupTime is "..wakeupTime)
       if wakeupTime == time then
         table.insert(threadsToWake, co)
       end
     end
 
-    --print ("waking "..#threadsToWake.." threads")
-
     for _, co in ipairs(threadsToWake) do
       WAITING_ON_TIME[co] = nil
-      resume(co)
+      VM.send(co)
     end
   end
 end
@@ -163,14 +107,14 @@ function wakeUpWaitingThreads(deltaTime)
 end
 
 function waitAny()
-  local co = coroutine.running()
+  local co = VM.running()
   --print (INDEX[co].. " wait for any")
   assert(co ~= nil, "The main thread cannot wait!")
   table.insert(WAITING_ON_ANY,co)
 end
 
 function stopWait()
-  local _co = coroutine.running()
+  local _co = VM.running()
   for n, co in ipairs(WAITING_ON_ANY) do
     if co == _co then
       table.remove(WAITING_ON_ANY,n)
@@ -188,7 +132,7 @@ end
 
 function waitSignal(signalName)
   -- Same check as in waitSeconds; the main thread cannot wait
-  local co = coroutine.running()
+  local co = VM.running()
   assert(co ~= nil, "The main thread cannot wait!")
 
   COROUTINES[co] = signalName
@@ -200,20 +144,11 @@ function waitSignal(signalName)
     table.insert(WAITING_ON_SIGNAL[signalName], co)
   end
   --printTable(WAITING_ON_SIGNAL)
-  return handleTerm(co,coroutine.yield(co))
+  return VM.receive()
 end
 
-
-local function deleteChildren(_co)
-  for _,co in ipairs(INDEX[_co].children) do
-    delete(co)
-  end
-end
 
 delete = function(_co)
-
-  deleteChildren(_co)
-  
   local signal = COROUTINES[_co]
   --if signal ~=nil then
   --writeStatus(INDEX[_co].." being stopped")
@@ -236,7 +171,7 @@ local function signalWaitAny(signalName,...)
   for n, co in ipairs(WAITING_ON_ANY) do
     resume(co, signalName, unpack(arg))
 
-    if coroutine.status(co)=="dead" then
+    if VM.status(co)=="dead" then
       WAITING_ON_ANY[n] = nil
     end
   end
@@ -260,24 +195,11 @@ function signal(signalName, ...)
   end
 end
 
-function runProcess(func,name,supervisor)
-  -- This function is just a quick wrapper to start a coroutine.
-  if not name then
-    error("coroutine with no name",2) end
-  local co = coroutine.create(func)
-
-
-  local parent = coroutine.running()
-  INDEX[co]={children={}}
-  INDEX[co].parent = parent
-  if #INDEX > 0 then
-    table.insert(INDEX[parent].children,co)
-  end
-  INDEX[co].name = name .. "_"..id
-  INDEX[co].supervisor = supervisor
-  NAME_INDEX[co]=INDEX[co].name
-  id = id + 1
-  return resume(co)
+function runProcess(fun,name)
+  if not ("function" == type(fun)) then error("badarg: Not a function",2) end
+  local co = VM.spawn(fun) 
+  if not name then name = "unnamed" end
+  NAME_INDEX[co] = name
 end
 
 function getWaitList()

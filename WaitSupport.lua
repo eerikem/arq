@@ -113,6 +113,7 @@ function waitAny()
   table.insert(WAITING_ON_ANY,co)
 end
 
+
 function stopWait()
   local _co = VM.running()
   for n, co in ipairs(WAITING_ON_ANY) do
@@ -122,12 +123,10 @@ function stopWait()
   end
 end
 
-local function handleTerm(co,event,...)
-  if event == "terminate" then
-    stop(co)
-  else
-    return event, unpack(arg)
-  end
+
+function stop(co)
+  writeStatus("Sending terminate to "..co)
+  VM.send(co,"terminate")
 end
 
 function waitSignal(signalName)
@@ -197,9 +196,10 @@ end
 
 function runProcess(fun,name)
   if not ("function" == type(fun)) then error("badarg: Not a function",2) end
-  local co = VM.spawn(fun) 
+  local co = VM.spawnlink(fun)
   if not name then name = "unnamed" end
   NAME_INDEX[co] = name
+  writeCo(co.." "..name)
 end
 
 function getWaitList()

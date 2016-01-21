@@ -27,6 +27,7 @@ end
 
 --Function redefined later
 writeStatus = function(str) print(str) end
+writeCo = function(str) print(str) end
 
 VM = dofile("server/vm.lua")
 dofile("arq/WaitSupport.lua")
@@ -52,16 +53,18 @@ local channels = {modem = "top", keeper= 1111, receive = 2222}
 local function addStatus(ui)
   local x, y = ui.getSize()
   local h = STATUS_HEIGHT
-  return window.create(ui.current(), 1, y - h + 1,x,h)
+  return window.create(ui.current(), 1, y - h + 1,x/2,h+1)
 end
 
+
 local status = addStatus(ui)
+
 
 writeStatus = function(str)
   local x,y = ui.getCursorPos()
   local w,h = status.getSize()
   local parent = ui.redirect(status)
-  term.scroll(1)
+  --term.scroll(1)
   term.setCursorPos(1,h)
   if string.find(string.lower(str),'error') then
     local c = term.getTextColor()
@@ -69,7 +72,7 @@ writeStatus = function(str)
     print(str)
     term.setTextColor(c)
   else
-    term.write(str)
+    print(str)
   end
   if LOGGING then
     local f = fs.open(log,"a")
@@ -82,6 +85,27 @@ writeStatus = function(str)
 end
 
 VM.log = writeStatus
+
+
+local function addCoList(ui)
+  local x,y = ui.getSize()
+  local w = (x/2)-1
+  return window.create(ui.current(), x-w,3,w,y-2)
+end
+
+local coList = addCoList(ui) 
+
+writeCo = function(str)
+  local x,y = ui.getCursorPos()
+  local w,h = coList.getSize()
+  local parent = ui.redirect(coList)
+  term.scroll(1)
+  term.setCursorPos(1,h)
+  term.write(str)
+  term.redirect(parent)
+  coList.redraw()
+  ui.setCursorPos(x,y)
+end
 
 local printFile = function(file)
   local f = assert(io.open(shell.resolve(file)))
@@ -156,15 +180,6 @@ local function queryUser(str)
   return r
 end
 
-local function supervisorMain()
-  while true do
-    local event, msg = coroutine.yield()
-    if event == "error_msg" then
-    --writeStatus ("Received error: "..msg)
-      error(msg)
-    end
-  end
-end
 
 local function shutdown()
   for n = 1, #uis do
@@ -180,6 +195,30 @@ local function askQuit()
     shutdown()
     --kill msg to turn off menu cycle
     return "kill"
+  end
+end
+
+--TODO write supervisor to spawn child programs
+--Maintains a list of said programs which it can shutdown.
+--TODO listeners can start and stop
+--TODO supervisor releases uis
+local function supervise(file)
+  VM.process_flag("trap_exit",true)
+  local module = dofile(file)
+  if not module then if root then module = root
+  else writeStatus(file.." must return a table with init & main functions")
+  return end end
+  assert(module.init,"Error, file is not a correct ARQ executable")
+  module.init(function() return writeStatus end)
+  for n = 1, #module.uis do
+    table.insert(uis,module.uis[n])
+  end
+  module.main()
+  local e, msg = VM.receive()
+  while e == "EXIT" do
+    writeStatus("Received exit message from "..file..": "..msg)
+    module.main()
+    e, msg = VM.receive()
   end
 end
 
@@ -201,15 +240,9 @@ end
 local function runFile(file)
   if not fs.exists(file) then file = "arq/"..file end
   if fs.exists(file) then
-    dofile(file)
-    assert(root.init,"Error, file is not a correct ARQ executable")
-    root.init(function() return writeStatus end)
-    for n = 1, #root.uis do
-      table.insert(uis,root.uis[n])
-    end
-        
-    register(file,runProcess(root.main,file,supervisor))
     
+    local co = VM.spawn(function() supervise(file) end)
+    writeCo(co.." "..file.." supervisor")
   else
     writeStatus("Error: "..file.." not found")
   end
@@ -284,6 +317,7 @@ end
 local function run()
   ui:clear()
   status.redraw()
+  coList.redraw()
   ui:aquireMonitors()
   ui:printCentered("ArqiTeknologies",1,2)
   local m = ui:readMenu(arqMenu)
@@ -292,10 +326,10 @@ end
 
 
 local function main()
-  supervisor = runProcess(supervisorMain,"arq_supervisor")
-  writeStatus("Running1")
+  --supervisor = runProcess(supervisorMain,"arq_supervisor")
+  --writeStatus("Running1")
   runProcess(wakerUpper,"wakerUpper",supervisor)
-  writeStatus("Running 2")
+  --writeStatus("Running 2")
   for i,file in ipairs(args) do
     writeStatus("Running "..file.." "..i)
     runFile(file)

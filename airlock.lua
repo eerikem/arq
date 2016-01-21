@@ -1,7 +1,6 @@
 
 
 local airlock = {}
-root = airlock
 
 local title = 'Airlock' 
 local locked = false
@@ -144,8 +143,9 @@ airlock.main = function()
     --m.run()
     m.setTitle(title)
     uis[n].menu = m
-    runProcess(m.cycle,"airlock_main")
+    runProcess(m.cycle,"airlock_main"..n)
   end
   runProcess(cycleMenus,"cycle_lstnr")
 end
 
+return airlock

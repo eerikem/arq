@@ -443,3 +443,5 @@ function UI:yesNo(str)
     exec(errorSound)
   end
 end
+
+return UI

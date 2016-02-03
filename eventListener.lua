@@ -6,7 +6,8 @@ UI = dofile("arq/ui.lua")
 gen_server = dofile("server/gen_server.lua")
 ui_server = dofile("arq/ui_server.lua")
 ui_sup = dofile("arq/ui_supervisor.lua")
-
+Graphic = dofile("arq/graphic.lua")
+Obj, List = dofile("arq/ui_obj.lua")
 --VM = require 'vm'
 --gen_server = require 'gen_server'
 --ui_server = require 'ui_server'
@@ -56,8 +57,10 @@ function Server.subscriber(Co,Module)
   return Module.start_link(Co)
 end
 
+VM.init()
 local Li = Server.start_link()
 local Ui = Server.subscriber(Li,ui_sup)
+ui_sup.app("terminal")
 
 while true do
   gen_server.cast(Li,{os.pullEvent()})

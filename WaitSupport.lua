@@ -199,7 +199,7 @@ function runProcess(fun,name)
   local co = VM.spawnlink(fun)
   if not name then name = "unnamed" end
   NAME_INDEX[co] = name
-  writeCo(co.." "..name)
+  --writeCo(co.." "..name)
 end
 
 function getWaitList()

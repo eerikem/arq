@@ -242,7 +242,7 @@ local function runFile(file)
   if fs.exists(file) then
     
     local co = VM.spawn(function() supervise(file) end)
-    writeCo(co.." "..file.." supervisor")
+    --writeCo(co.." "..file.." supervisor")
   else
     writeStatus("Error: "..file.." not found")
   end

@@ -1,8 +1,8 @@
-
+Obj, List = require 'ui_obj'
 local Server = {}
 
 function Server.start_link(Sup)
-  return gen_server.start_link(Server,{Sup},{})
+  return gen_server.start_link(Server,{Sup},{},"ui_sup")
 end
 
 local function link_ui(term,name)
@@ -25,7 +25,17 @@ local events = {
   term_resize = nil
 }
 
+local getNames = function(State)
+  local r = {}
+  for k,_ in pairs(State.uis) do
+    table.insert(r,k) end
+  return r
+end
+
 function Server.handle_call(Request,From,State)
+  if Request == "get_ui_names" then
+    VM.send(From[1],getNames(State))
+  end
   return State
 end
 
@@ -48,7 +58,8 @@ local function subscribe(Co,event)
 end
 
 function Server.init(eventCo)
-  local Uis = {terminal = link_ui(term,"Terminal")}
+  local Uis = {terminal = link_ui(term.current(),"Terminal")}
+  VM.register("terminal",Uis.terminal)
   subscribe(eventCo,"mouse_click")
   for n,name in ipairs(peripheral.getNames()) do
     if peripheral.getType(name) == "monitor" then
@@ -58,5 +69,14 @@ function Server.init(eventCo)
   return {uis = Uis, events = eventCo}
 end
 
+function Server.getUInames()
+  return gen_server.call("ui_sup","get_ui_names")
+end
+
+function Server.app(Co)
+  local ui = ui_server.newWindow(Co)
+  local l = List:fromArray(Server.getUInames())
+  ui:draw(l)
+end
 
 return Server

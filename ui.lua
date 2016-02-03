@@ -444,4 +444,8 @@ function UI:yesNo(str)
   end
 end
 
+function UI:list(alist)
+  print("arrived at list")
+end
+
 return UI

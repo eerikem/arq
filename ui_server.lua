@@ -14,36 +14,53 @@ end
 function Server.init(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
+  win.setCursorBlink(true)
   local ui = UI:new(win)
   ui.name = name
-  ui.setBackgroundColor(colors.gray)
-  ui.clear()
-  ui.setTextColor(colors.lightGray)
-  local label = ui.name 
-  if w >= string.len(label) then
-    ui:printCentered(label,h/2)
-  else
-    ui:indentLeft(label,0,h/2)
-    ui:printCentered(string.sub(ui.name,w+1),h/2+1)
+  ui:setBackground(colors.gray)
+  ui:setText(colors.lightGray)
+  local label = Graphic:new(ui.name)
+  label.align = "center"
+  ui:add(label)
+  ui:update()
+  return {ui = ui,focus = win,stack = {win},windows={}}
+end
+
+local function newWindow(State,Co)
+  local ui = UI:new(window.create(State.focus,1,1,State.focus.getSize()))
+  State.windows[ui] = ui.term.redraw --TODO window management?
+  ui.redraw = function(self)
+    gen_server.cast(Co,{"update",self})
   end
-  return {ui = ui,focus = win,stack = {win}}
+  return ui
 end
 
 function Server.handle_call(Request,From,State)
   if Request == "new_window" then
-    VM.send(From[1],UI:new(window.create(State.focus,1,1,State.focus.getSize())))
+    VM.send(From[1],newWindow(State,VM.running()))
   end
   return State
 end
 
 function Server.handle_cast(Request,State)
-  State.ui:printCentered(Request[1],1)
+  if type(Request) == "table" then
+    if Request[1] == "update" then
+      local ui = Request[2]
+      ui:update()--TODO Redraw the stack
+      --State.windows[]()
+    elseif Request[1]== "monitor_touch" then
+      State.ui:printCentered("touch",2)
+      --State.ui:update()
+    end
+  end
+  State.ui:printCentered("Got "..Request[1],1)
   --return "noreply", State
   return State
 end
 
 function Server.newWindow(Co,w,h)
-  local ui = gen_server.call(Co,"new_window") 
+  --todo handle requests to bad monitors
+  local ui = gen_server.call(Co,"new_window")
   return ui
 end
 

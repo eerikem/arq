@@ -1,7 +1,7 @@
-local Obj = {xpos=1,ypos=1}
+local Panel = {xpos=1,ypos=1}
 
-function Obj:new(o)
-  local o = o or {content = {}}
+function Panel:new(o)
+  local o = o or {content = {},index = {}}
   setmetatable(o, self)
   self.__index = self
   return o
@@ -9,96 +9,113 @@ end
 
 local proto = {}
 
-function proto.write(text)
-  term.write(text)
-end
-
-function proto:color()
+function proto:color(term)
   if(self.background) then
     term.setBackgroundColor(self.background) end
   if(self.textColor) then
     term.setTextColor(self.textColor) end
 end
 
-function proto:redraw()
-  local color = term.getTextColor()
-  local back = term.getBackgroundColor()
-  self:color()
-  self.write(self.text)
-  term.setTextColor(color)
-  term.setBackgroundColor(back)
+function proto:redraw(ui)
+  --error("here",2)
+  local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
+  local back = ui.term.getBackgroundColor()
+  self:color(ui.term)
+  local x,y = self:setCursor(ui)
+  if self.align == "center" then
+    ui:printCentered(self.text,y)
+  else
+    ui.term.write(self.text)
+  end
+  ui.term.setTextColor(color)
+  ui.term.setBackgroundColor(back)
 end
 
-Obj.proto = proto
+Panel.proto = proto
+
+function proto:setCursor(ui)
+  local x,y = ui.term.getCursorPos()
+  x = x + self.xpos - 1
+  y = y + self.ypos - 1
+  ui.term.setCursorPos(x, y)
+  return x, y
+end
 
 --Set the object's colors by assigning values to proto
-function Obj:setColors(background,text)
+function Panel:setColors(background,text)
   self.proto.background = background
   self.proto.textColor = text
 end
 
-function Obj:draw()
-  for K,_ in pairs(self.content) do
-    K:redraw()
-  end
-end
+Panel.setCursor = proto.setCursor
 
-function Obj:redraw()
-  local color = term.getTextColor()
-  local back = term.getBackgroundColor()
+function Panel:redraw(ui)
+  local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
+  local back = ui.term.getBackgroundColor()
   self:setColors(self.background,self.textColor)
-  self:draw()
+  local x = self:setCursor(ui)
+  for K,_ in pairs(self.content) do
+    K:redraw(ui)
+    incCursorPos(ui.term,x)
+  end
   term.setTextColor(color)
   term.setBackgroundColor(back)
 end
 
-function Obj:setContent(...)
+function Panel:setContent(...)
   self.content = {}--TODO remove metatable?
   for _,V in ipairs(arg) do
-    self:addContent(V)
+    self:add(V)
   end
 end
 
-function Obj:remove(c)--TODO remove metatable?
+function Panel:remove(c)--TODO remove metatable?
+  table.remove(c,self.content[c])
   self.content[c]=nil
 end
 
-function Obj:addContent(c)
-  setmetatable(c,{__index=self.proto})
-  self.content[c]=true
+local function applyProto(c)
+  local m = getmetatable(c)
+  if m then applyProto(m)
+  else
+    setmetatable(c,{__index = proto})
+  end
+end
+
+function Panel:add(c)
+  applyProto(c)
+  table.insert(self.index,c)
+  self.content[c]=table.maxn(self.index)
 end
 
 
-function Obj:redrawFocus()
+function Panel:redrawFocus()
   self:setColors(colors.gray,colors.lightGray)
   self:draw()
 end
 
-local List = Obj:new()
+local List = Panel:new()
 
-function List:setCursorPos()
-  term.setCursorPos(self.xpos,self.ypos)
+function incCursorPos(term,xpos)
+  local x,y = term.getCursorPos()
+  if xpos then x = xpos end
+  term.setCursorPos(x,y+1)
 end
 
-function List:incCursorPos()
-  local _,y = term.getCursorPos()
-  term.setCursorPos(self.xpos,y+1)
-end
-
-function List:draw()
-  self:setCursorPos()
-  for K,_ in pairs(self.content) do
-    K:redraw()
-    self:incCursorPos()
+function List:redraw(ui)
+  local x = self:setCursor(ui)
+  for _,V in ipairs(self.index) do
+    V:redraw(ui)
+    incCursorPos(ui.term,x)
   end
 end
 
 function List:fromArray(A)
   local l = List:new()
   for _,V in ipairs(A) do
-    l:addContent(Graphic:new({text = V}))
+    l:add(Graphic:new({text = V}))
   end
   return l
 end
 
-return Obj, List
+return Panel, List

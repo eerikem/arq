@@ -1,6 +1,8 @@
-local Graphic = {x = 1, y = 1}
+local Graphic = {text = "", xpos = 1, ypos = 1}
 
 function Graphic:new(o)
+  if type(o)=="string" then
+  o = {text = o} end
   local o = o or {}
   setmetatable(o, self)
   self.__index = self

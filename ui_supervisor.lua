@@ -20,7 +20,8 @@ local events = {
   mouse_up = nil,
   mouse_scroll = nil,
   mouse_drag = nil,
-  monitor_touch = function(Uis,name,x,y) gen_server.cast(Uis[name],{"monitor_touch",x,y}) end,
+  monitor_touch = function(Uis,name,x,y)
+    gen_server.cast(Uis[name],{"monitor_touch",name,x,y}) end,
   monitor_resize = nil,
   term_resize = nil
 }
@@ -33,8 +34,11 @@ local getNames = function(State)
 end
 
 function Server.handle_call(Request,From,State)
+  local From, Ref = unpack(From)
   if Request == "get_ui_names" then
-    VM.send(From[1],getNames(State))
+    VM.send(From,getNames(State))
+  elseif Request == "get_uis" then
+    VM.send(From,State.uis)
   end
   return State
 end
@@ -43,6 +47,7 @@ local function parse(State,event,...)
   if events[event] then
     events[event](State.uis,unpack(arg))
   else
+    error("received unhandled event: "..event)
   --TODO default event and terminate?
   end
   return State
@@ -61,9 +66,11 @@ function Server.init(eventCo)
   local Uis = {terminal = link_ui(term.current(),"Terminal")}
   VM.register("terminal",Uis.terminal)
   subscribe(eventCo,"mouse_click")
+  subscribe(eventCo,"monitor_touch")
   for n,name in ipairs(peripheral.getNames()) do
     if peripheral.getType(name) == "monitor" then
       Uis[name]=link_ui(peripheral.wrap(name),name)
+      VM.register(name,Uis[name])
     end
   end
   return {uis = Uis, events = eventCo}
@@ -73,10 +80,32 @@ function Server.getUInames()
   return gen_server.call("ui_sup","get_ui_names")
 end
 
+function Server.getUis()
+  return gen_server.call("ui_sup","get_uis")
+end
+
+function Server.newWindow(name,w,h)
+  local Uis = Server.getUis()
+  if Uis[name] then
+    return ui_server.newWindow(Uis[name],w,h)
+  else
+    error("Error: "..name.." not found.",2)
+  end
+end
+
 function Server.app(Co)
-  local ui = ui_server.newWindow(Co)
+  local ui = ui_sup.newWindow(Co)
   local l = List:fromArray(Server.getUInames())
-  ui:draw(l)
+  ui:setBackground(colors.lightGray)
+  ui:setText(colors.gray)
+  local t = Graphic:new("UI List")
+  t.align="center"
+  t.background = colors.gray
+  t.textColor = colors.lightGray
+  ui.term.reposition(10,5,11,8)
+  ui:add(t)
+  ui:add(l)
+  ui:redraw()
 end
 
 return Server

@@ -1,20 +1,15 @@
 
 local Server = {}
 EVE = Server
-VM = dofile("server/vm.lua")
-UI = dofile("arq/ui.lua")
-gen_server = dofile("server/gen_server.lua")
-ui_server = dofile("arq/ui_server.lua")
-ui_sup = dofile("arq/ui_supervisor.lua")
-Graphic = dofile("arq/graphic.lua")
-Obj, List = dofile("arq/ui_obj.lua")
---VM = require 'vm'
---gen_server = require 'gen_server'
---ui_server = require 'ui_server'
---EVE = require 'eventListener'
 
---gen_server = require "gen_server.lua"
-
+VM = require "vm"
+--UI = require "ui"
+UI = require "ui_lib"
+gen_server = require "gen_server"
+ui_server = require "ui_server"
+ui_sup = require "ui_supervisor"
+Graphic = require "graphic"
+Panel, List = require "ui_obj"
 
 function Server.start_link()
   return gen_server.start_link(Server,{},{})
@@ -39,7 +34,6 @@ function Server.handle_cast(Request,State)
     --print(type(State))
     --for K,CO in pairs(State) do print("smd"..K)end
     if State[Request[1]] then
-      --print("cororeaklj")
       for _,Co in ipairs(State[Request[1]]) do
         gen_server.cast(Co,Request)
       end

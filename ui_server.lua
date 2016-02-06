@@ -23,7 +23,7 @@ function Server.init(term,name)
   label.align = "center"
   ui:add(label)
   ui:update()
-  return {ui = ui,focus = win,stack = {win},windows={}}
+  return {ui = ui,focus = win,stack = {win},windows={},events={}}
 end
 
 local function newWindow(State,Co,w,h)
@@ -59,11 +59,29 @@ function Server.handle_cast(Request,State)
     elseif Request[1]== "monitor_touch" then
       State.ui:printCentered("touch",2)
       --State.ui:update()
+    elseif Request[1]== "register" then
+      local event = Request[2]
+      local co = Request [3]
+      HashArrayInsert(State.events,event,co)
+      VM.log("Subscribed new co to "..event)
+      EVE.subscribe("events",event)
+    elseif State.events[Request[1]] then --todo generic event subscriber handler
+      local co = State.events[Request[1]][1]--todo for each
+      local event, dir, x, y unpack(Request)
+      if dir == 1 then
+        VM.send(co,"scroll_down")
+      else
+        VM.send(co,"scroll_up")
+      end
     end
   end
-  State.ui:printCentered("Got "..Request[1],1)
+  VM.log("Got "..Request[1],1)
   --return "noreply", State
   return State
+end
+
+function Server.listen(Co,event,co)
+  gen_server.cast(Co,{"register",event,co})
 end
 
 function Server.newWindow(Co,w,h)

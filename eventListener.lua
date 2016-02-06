@@ -25,14 +25,8 @@ end
 
 function Server.handle_cast(Request,State)
   if Request[1]=="subscribe" then
-    --print("subscribing "..Request[2].." for "..Request[3]..".")
     HashArrayInsert(State,Request[3],Request[2])
-    --print(type(State))
-    --for K,Co in pairs(State) do print("smd"..K)end
   else
-    --print("Received "..Request[1])
-    --print(type(State))
-    --for K,CO in pairs(State) do print("smd"..K)end
     if State[Request[1]] then
       for _,Co in ipairs(State[Request[1]]) do
         gen_server.cast(Co,Request)
@@ -53,12 +47,25 @@ end
 
 VM.init()
 local Li = Server.start_link()
+VM.register("events",Li)
 local Ui = Server.subscriber(Li,ui_sup)
 ui_sup.app("terminal")
-local write = ui_sup.statusWindow()
-write("hello?!?")
-write("another...")
-write("error: this is an error")
+local write, scroll = unpack(ui_sup.statusWindow())
+VM.log = write
+--write("hello1")
+--write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
+--write("error: this is an error error error error error error error error error error error2")
+--write("hello2")
+--write("hello3")
+--write("hello4")
+--write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
+--write("error: this is an error error error error error error error error error error error2")
+
+--scroll("up")
+--scroll("up")
+--scroll("up")
+--write("hello5")
+
 while true do
   gen_server.cast(Li,{os.pullEvent()})
 end

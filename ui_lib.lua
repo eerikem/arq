@@ -10,29 +10,28 @@ function UI:new(term)
 end
 
 function UI:draw(obj)
-  obj:redraw(self)
+  return obj:redraw(self)
 end
 
 function UI:add(obj)
   self.pane:add(obj)
-  self:draw(obj)
+  return self:draw(obj)
 end
 
-function UI:printCentered(str, ypos)
+function UI:printCentered(str, ypos,n,noscroll)
+  if not n then n = 0 end
   local w,h = self.term.getSize()
-  --print("Printing '"..str.."' on "..self.name)
   if w >= string.len(str) then
-    self.term.setCursorPos(w/2 - #str/2 + 1, ypos)
-    self.term.write(str)
+    return n + self:indentLeft(str,w/2 - #str/2,ypos,noscroll)
   else
-    self:indentLeft(str,0,ypos)
-    self:printCentered(string.sub(str,w+1),ypos+1)
+    n = n + self:indentLeft(str,0,ypos,noscroll)
+    return self:printCentered(string.sub(str,w+1),ypos+1,n,noscroll)
   end
 end
 
-function UI:indentLeft(str, indent, ypos)
+function UI:indentLeft(str, indent, ypos,noscroll)
   self.term.setCursorPos(indent + 1, ypos)
-  self.term.write(str)
+  return self:write(str,noscroll)
 end
 
 function UI:setBackground(color)
@@ -74,6 +73,70 @@ function UI:align(...)
   if v["left"] then
     x = 1 end
   self.term.reposition(x,y)
+end
+
+function UI:write( sText,noscroll)
+  local w,h = self.term.getSize()    
+  local x,y = self.term.getCursorPos()
+  
+  local nLinesPrinted = 0
+  local function newLine()
+    if y + 1 <= h then
+      self.term.setCursorPos(1, y + 1)
+    else
+      if noscroll then
+        return true
+      else
+        self.term.setCursorPos(1, h)
+        self.term.scroll(1)
+      end
+    end
+    x, y = self.term.getCursorPos()
+    nLinesPrinted = nLinesPrinted + 1
+  end
+  
+  -- Print the line with proper word wrapping
+  while string.len(sText) > 0 do
+    local whitespace = string.match( sText, "^[ \t]+" )
+    if whitespace then
+      -- Print whitespace
+      self.term.write( whitespace )
+      x,y = self.term.getCursorPos()
+      sText = string.sub( sText, string.len(whitespace) + 1 )
+    end
+    
+    local newline = string.match( sText, "^\n" )
+    if newline then
+      -- Print newlines
+      if newLine() then return nLinesPrinted end
+      sText = string.sub( sText, 2 )
+    end
+    
+    local text = string.match( sText, "^[^ \t\n]+" )
+    if text then
+      sText = string.sub( sText, string.len(text) + 1 )
+      if string.len(text) > w then
+        -- Print a multiline word       
+        while string.len( text ) > 0 do
+          if x > w then
+            if newLine() then return nLinesPrinted end
+          end
+          self.term.write( text )
+          text = string.sub( text, (w-x) + 2 )
+          x,y = self.term.getCursorPos()
+        end
+      else
+        -- Print a word normally
+        if x + string.len(text) - 1 > w then
+          if newLine() then return nLinesPrinted end
+        end
+        self.term.write( text )
+        x,y = self.term.getCursorPos()
+      end
+    end
+  end
+  
+  return nLinesPrinted
 end
 
 return UI

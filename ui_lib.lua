@@ -53,4 +53,27 @@ function UI:update()
   term.setBackgroundColor(back)
 end
 
+function UI:align(...)
+  local w,h = self.term.getSize()
+  local x,y = self.term.getPosition()
+  local px,py = self.parent.getSize()
+  local v={}
+  if #arg > 2 then error('At most 2 args: "top","center" or "bottom","right"',2) end
+  for _,pos in ipairs(arg) do
+    v[pos]=true
+  end
+  if v["center"] then
+    x = (px - w + 1) / 2
+    y = (py - h + 1) / 2 end
+  if v["bottom"] then
+    y = py-h + 1 end
+  if v["top"] then
+    y = 1 end
+  if v["right"] then
+    x = px-w + 1 end
+  if v["left"] then
+    x = 1 end
+  self.term.reposition(x,y)
+end
+
 return UI

@@ -26,8 +26,13 @@ function Server.init(term,name)
   return {ui = ui,focus = win,stack = {win},windows={}}
 end
 
-local function newWindow(State,Co)
-  local ui = UI:new(window.create(State.focus,1,1,State.focus.getSize()))
+local function newWindow(State,Co,w,h)
+  local maxW, maxH = State.ui.term.getSize()
+  if not w or not h then w, h = maxW, maxH end --todo no arg goes to best fit?!?
+  if w == "max" then w = maxW end
+  if h == "max" then h = maxH end
+  local ui = UI:new(window.create(State.focus,1,1,w,h))
+  ui.parent = State.ui.term
   State.windows[ui] = ui.term.redraw --TODO window management?
   ui.redraw = function(self)
     gen_server.cast(Co,{"update",self})
@@ -36,8 +41,11 @@ local function newWindow(State,Co)
 end
 
 function Server.handle_call(Request,From,State)
-  if Request == "new_window" then
-    VM.send(From[1],newWindow(State,VM.running()))
+  if Request[1] == "new_window" then
+    local _,w,h = unpack(Request)
+    VM.send(From[1],newWindow(State,VM.running(),w,h))
+  else
+    error("received unkown msg")
   end
   return State
 end
@@ -60,7 +68,7 @@ end
 
 function Server.newWindow(Co,w,h)
   --todo handle requests to bad monitors
-  local ui = gen_server.call(Co,"new_window")
+  local ui = gen_server.call(Co,{"new_window",w,h})
   return ui
 end
 

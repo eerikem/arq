@@ -54,8 +54,8 @@ function Panel:redraw(ui)
   local back = ui.term.getBackgroundColor()
   self:setColors(self.background,self.textColor)
   local x = self:setCursor(ui)
-  for K,_ in pairs(self.content) do
-    K:redraw(ui)
+  for _,V in ipairs(self.index) do
+    V:redraw(ui)
     incCursorPos(ui.term,x)
   end
   term.setTextColor(color)

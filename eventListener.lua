@@ -55,7 +55,10 @@ VM.init()
 local Li = Server.start_link()
 local Ui = Server.subscriber(Li,ui_sup)
 ui_sup.app("terminal")
-
+local write = ui_sup.statusWindow()
+write("hello?!?")
+write("another...")
+write("error: this is an error")
 while true do
   gen_server.cast(Li,{os.pullEvent()})
 end

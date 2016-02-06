@@ -96,16 +96,47 @@ end
 function Server.app(Co)
   local ui = ui_sup.newWindow(Co)
   local l = List:fromArray(Server.getUInames())
-  ui:setBackground(colors.lightGray)
-  ui:setText(colors.gray)
+  ui:setBackground(colors.gray)
+  ui:setText(colors.lightGray)
   local t = Graphic:new("UI List")
   t.align="center"
-  t.background = colors.gray
-  t.textColor = colors.lightGray
+  t.ypos = 2
+  l.xpos = 2
+  l.ypos = 1
+  t.background = colors.lightGray
+  t.textColor = colors.gray
   ui.term.reposition(10,5,11,8)
   ui:add(t)
   ui:add(l)
   ui:redraw()
+end
+
+function Server.statusWindow()
+  local height = 6
+  local ui = ui_sup.newWindow("terminal","max",height)
+  ui:align("bottom","left")
+  ui:setBackground(colors.gray)
+  ui:setText(colors.lightGray)
+  ui:redraw()
+  ui.term.setCursorBlink(true)
+  local co = VM.spawnlink(function()
+    while true do
+      local str = VM.receive()
+      ui.term.scroll(1)
+      if string.find(string.lower(str),'error') then
+        ui:add(Graphic:new({text = str,textColor=colors.red}))
+      else
+        ui:add(Graphic:new(str))
+      --local x ,y = ui.term.getCursorPos()
+      --error("writing"..x..y)
+      end
+      ui:redraw()
+    end
+  end
+  )
+  return function(msg)
+    VM.send(co,msg)
+  end
 end
 
 return Server

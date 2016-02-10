@@ -23,16 +23,16 @@ function Server.init(term,name)
   label.align = "center"
   ui:add(label)
   ui:update()
-  return {ui = ui,focus = win,stack = {win},windows={},events={}}
+  return {native = term, ui = ui,focus = win,stack = {win},windows={},events={}}
 end
 
 local function newWindow(State,Co,w,h)
-  local maxW, maxH = State.ui.term.getSize()
+  local maxW, maxH = State.native.getSize()
   if not w or not h then w, h = maxW, maxH end --todo no arg goes to best fit?!?
   if w == "max" then w = maxW end
   if h == "max" then h = maxH end
-  local ui = UI:new(window.create(State.focus,1,1,w,h))
-  ui.parent = State.ui.term
+  local ui = UI:new(window.create(State.native,1,1,w,h))
+  ui.native = State.native
   State.windows[ui] = ui.term.redraw --TODO window management?
   ui.redraw = function(self)
     gen_server.cast(Co,{"update",self})
@@ -73,9 +73,12 @@ function Server.handle_cast(Request,State)
       else
         VM.send(co,"scroll_up")
       end
+    else
+      VM.log("Got unhandled "..Request[1].." on "..State.ui.name,1)    
     end
+  else
+    VM.log("Unkown signal type received on "..State.ui.name)
   end
-  VM.log("Got "..Request[1],1)
   --return "noreply", State
   return State
 end

@@ -49,9 +49,11 @@ VM.init()
 local Li = Server.start_link()
 VM.register("events",Li)
 local Ui = Server.subscriber(Li,ui_sup)
-ui_sup.app("terminal")
-local write, scroll = unpack(ui_sup.statusWindow())
+local write = ui_sup.statusWindow("terminal")
 VM.log = write
+ui_sup.app("terminal")
+local write2 = ui_sup.statusWindow("monitor_4")
+write2("I am here")
 --write("hello1")
 --write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
 --write("error: this is an error error error error error error error error error error error2")
@@ -67,6 +69,7 @@ VM.log = write
 --write("hello5")
 
 while true do
+  --VM.flush()
   gen_server.cast(Li,{os.pullEvent()})
 end
 

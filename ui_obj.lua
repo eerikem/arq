@@ -1,26 +1,58 @@
-local Panel = {xpos=1,ypos=1}
+local panelIndex = 0
+local protoIndex = 0
+local Panel = {xpos=1,ypos=1,id="panel"}
+
+local proto = {id="proto"}
 
 function Panel:new(o)
   local o = o or {content = {},index = {}}
   setmetatable(o, self)
   self.__index = self
+  o.id="panel"..panelIndex
+  panelIndex = panelIndex + 1
+  o.proto = proto:new()
   return o
 end
 
-local proto = {}
+function proto:new(o)
+  local o = o or {}
+  o.id="proto"..protoIndex
+  protoIndex = protoIndex + 1
+  setmetatable(o,self)
+  self.__index = self
+  return o
+end
 
-function proto:color(term)
-  if(self.background) then
-    term.setBackgroundColor(self.background) end
-  if(self.textColor) then
-    term.setTextColor(self.textColor) end
+function proto:color(out)
+  if self.background then
+--    out.write("app back1",0)sleep(1)
+    out.setBackgroundColor(self.background)
+--    out.write("app back2",0)sleep(1)
+--  else out.write("txt not ppld",0)sleep(1)
+  elseif self.proto.background then
+    out.setBackgroundColor(self.proto.background)
+  end
+  if self.textColor then
+--    out.write("app text1",0)sleep(1)
+    out.setTextColor(self.textColor)
+--    out.write("app text2",0)sleep(1)
+--  else out.write("txt not ppld",0)sleep(1)
+  elseif self.proto.textColor then
+    out.setTextColor(self.proto.textColor)
+  end
+   --print("Coloring"..self.proto.id)sleep(1)
+--  print("writing: "..self.text)sleep(1)
+  --out.setTextColor(colors.black)
+--  out.write(self.text.."2")sleep(1)
 end
 
 function proto:redraw(ui,noscroll)
   --error("here",2)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
+--  print("hello before color")
   self:color(ui.term)
+--  print("hello after color")sleep(1)
   local x,y = self:setCursor(ui)
   local w,h = ui.term.getSize()
   local counter = 0
@@ -35,14 +67,12 @@ function proto:redraw(ui,noscroll)
   if self.align == "center" then
     counter = ui:printCentered(self.text,y,noscroll)
   else
-    counter = ui:indentLeft(self.text,0,y,noscroll)
+    counter = ui:write(self.text,noscroll)
   end
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)
   return counter
 end
-
-Panel.proto = proto
 
 function proto:setCursor(ui)
   local x,y = ui.term.getCursorPos()
@@ -58,10 +88,19 @@ function Panel:setColors(background,text)
   self.proto.textColor = text
 end
 
+function Panel:applyColors(ui)
+  if self.proto.background then
+    ui.term.setBackgroundColor(self.proto.background) end
+  if self.proto.textColor then
+    ui.term.setTextColor(self.proto.textColor) end
+end
+
 function Panel:drawSubset(ui,start,num)
   if start < 1 or start + num -1 > #self.index then
     error("bad indexes for subset",2) end
   local c = 0
+  ui.pane:applyColors(ui)
+  self:applyColors(ui)
   local first = true
   while num > 0 do
     if first then first = false
@@ -78,7 +117,7 @@ Panel.setCursor = proto.setCursor
 function Panel:redraw(ui,noscroll)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
-  self:setColors(self.background,self.textColor)
+  self:applyColors(ui)
   local x = self:setCursor(ui)
   local first = true
   local lineCounter = 0
@@ -88,8 +127,8 @@ function Panel:redraw(ui,noscroll)
     lineCounter = lineCounter + 1 end
     lineCounter = lineCounter + V:redraw(ui,noscroll)
   end
-  term.setTextColor(color)
-  term.setBackgroundColor(back)
+  ui.term.setTextColor(color)
+  ui.term.setBackgroundColor(back)
   return lineCounter
 end
 
@@ -105,18 +144,42 @@ function Panel:remove(c)--TODO remove metatable?
   self.content[c]=nil
 end
 
-local function applyProto(c)
-  local m = getmetatable(c)
-  if m then applyProto(m)
-  else
-    setmetatable(c,{__index = proto})
+function Panel:applyProto(c)
+--  local m = getmetatable(c)
+--  if m then self:applyProto(m)
+--  else
+--    setmetatable(c,{__index = self.proto})
+--  end
+  if not c.proto then
+    c.proto = self.proto
+    if not c.redraw then
+    c.redraw = c.proto.redraw end
+    c.color = c.proto.color
+    c.setCursor = c.proto.setCursor
   end
+--  local n = {__index = self.proto}
+--  local m = getmetatable(c)
+--  if m then
+--    setmetatable(n,m)
+--  end
+--  setmetatable(c,n)
 end
 
+--function Panel:add(c)
+--  self:applyProto(c)
+--  table.insert(self.index,c)
+--  self.content[c]=table.maxn(self.index)
+--end
+
 function Panel:add(c)
-  applyProto(c)
-  table.insert(self.index,c)
-  self.content[c]=table.maxn(self.index)
+--  local o = {__index==c}
+--  setmetatable(o,o)
+  --local o = c:new()
+  local o = c
+  self:applyProto(o)
+  table.insert(self.index,o)
+  self.content[o]=table.maxn(self.index)
+  return o
 end
 
 
@@ -141,6 +204,7 @@ end
 
 function List:redraw(ui,noscroll)
   local x = self:setCursor(ui)
+  self:applyColors(ui)
   local first = true
   local counter = 0
   for _,V in ipairs(self.index) do
@@ -159,4 +223,5 @@ function List:fromArray(A)
   return l
 end
 
+Panel.list = List
 return Panel, List

@@ -108,23 +108,23 @@ function Server.app(Co)
   ui.term.reposition(10,5,11,8)
   ui:add(t)
   ui:add(l)
-  ui:redraw()
+  ui:update()
 end
 
-function Server.statusWindow()
+function Server.statusWindow(Co)
   local height = 6
   local MSG_CNT = 0
-  local Co = "terminal"
   local ui = ui_sup.newWindow(Co,"max",height)
   ui:align("bottom","left")
-  ui:setBackground(colors.gray)
-  ui:setText(colors.lightGray)
+  ui:setBackground(colors.black)
+  ui:setText(colors.gray)
   ui:redraw()
   ui.term.setCursorBlink(true)
   local co = VM.spawnlink(function()
     local counter = {}
     local n, pos = nil, 0
     local current = pos
+    local first = true
     while true do
       local str = VM.receive()
       local sum = 0
@@ -156,7 +156,8 @@ function Server.statusWindow()
           ui:redraw() end
         pos = table.maxn(counter) + 1
         current = pos
-        incCursorPos(ui.term,1)
+        if first then first = false else
+        incCursorPos(ui.term,1) end
         MSG_CNT = MSG_CNT + 1
         if string.find(string.lower(str),'error') then
           n = ui:add(Graphic:new({text = MSG_CNT.." "..str,textColor=colors.red}))
@@ -180,7 +181,7 @@ function Server.statusWindow()
       VM.send(co,"scoll_down")
     end
   end
-  return {send, scroll}
+  return send
 end
 
 return Server

@@ -10,12 +10,13 @@ function UI:new(term)
 end
 
 function UI:draw(obj)
+  self.pane:applyColors(self)
   return obj:redraw(self)
 end
 
 function UI:add(obj)
-  self.pane:add(obj)
-  return self:draw(obj)
+  local o = self.pane:add(obj)
+  return self:draw(o)
 end
 
 function UI:printCentered(str, ypos,n,noscroll)
@@ -29,33 +30,41 @@ function UI:printCentered(str, ypos,n,noscroll)
   end
 end
 
+--Indent relative to term
 function UI:indentLeft(str, indent, ypos,noscroll)
-  self.term.setCursorPos(indent + 1, ypos)
+  if ypos then
+    self.term.setCursorPos(indent + 1, ypos)
+  else
+    local x,y = self.term.getPosition()
+    self.term.setCursorPos(indent + 1, y)
+  end
   return self:write(str,noscroll)
 end
 
 function UI:setBackground(color)
-  self.pane.background = color
+  self.pane.proto.background = color
 end
 
 function UI:setText(color)
   if type(self) == "number" then error("got it",2) end
-  self.pane.textColor = color
+  self.pane.proto.textColor = color
 end
 
 function UI:update()
   local back = term.getBackgroundColor()
-  self.term.setBackgroundColor(self.pane.background)
+  --if self.pane.proto.background then
+  --self.term.setBackgroundColor(self.pane.proto.background) end
+  self.pane:applyColors(self)
   self.term.clear()
   self.term.setCursorPos(1,1)
   self:draw(self.pane)
-  term.setBackgroundColor(back)
+  --term.setBackgroundColor(back)
 end
 
 function UI:align(...)
   local w,h = self.term.getSize()
   local x,y = self.term.getPosition()
-  local px,py = self.parent.getSize()
+  local px,py = self.native.getSize()
   local v={}
   if #arg > 2 then error('At most 2 args: "top","center" or "bottom","right"',2) end
   for _,pos in ipairs(arg) do
@@ -76,6 +85,7 @@ function UI:align(...)
 end
 
 function UI:write( sText,noscroll)
+  if not sText then error("cannot write nil",2) end
   local w,h = self.term.getSize()    
   local x,y = self.term.getCursorPos()
   

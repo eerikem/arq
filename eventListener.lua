@@ -10,6 +10,7 @@ ui_server = require "ui_server"
 ui_sup = require "ui_supervisor"
 Graphic = require "graphic"
 Panel, List = require "ui_obj"
+Menu = require "ui_menu"
 
 function Server.start_link()
   return gen_server.start_link(Server,{},{})

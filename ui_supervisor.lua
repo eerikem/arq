@@ -95,7 +95,7 @@ end
 
 function Server.app(Co)
   local ui = ui_sup.newWindow(Co)
-  local l = List:fromArray(Server.getUInames())
+  local l = List.fromArray(Server.getUInames())
   ui:setBackground(colors.gray)
   ui:setText(colors.lightGray)
   local t = Graphic:new("UI List")
@@ -107,7 +107,10 @@ function Server.app(Co)
   t.textColor = colors.gray
   ui.term.reposition(10,5,11,8)
   ui:add(t)
-  ui:add(l)
+  --ui:add(l)
+  local m = Menu.fromList(l)
+  --m.align = "left"
+  ui:add(m)
   ui:update()
 end
 

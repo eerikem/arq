@@ -9,14 +9,34 @@ function UI:new(term)
   return o
 end
 
+function UI:newWindow(x,y,w,h,visible)
+  assert(x and y and w and h,'Four parameters expected')
+  local t
+  if not self.term then
+    t = term.current()
+  else
+    t = self.term
+  end
+  local ui = UI:new(window.create(t,x,y,w,h,visible))
+  ui.native = t
+  ui:setBackground(t.getBackgroundColor())
+  ui:setText(t.getTextColor())
+  return ui
+end
+
 function UI:draw(obj)
   self.pane:applyColors(self)
   return obj:redraw(self)
 end
 
-function UI:add(obj)
-  local o = self.pane:add(obj)
-  return self:draw(o)
+function UI:add(...)
+  local n = 0 
+    print "here"
+  for _,obj in ipairs(arg) do
+    local o = self.pane:add(obj)
+    n = n + self:draw(o)
+  end
+  return n
 end
 
 function UI:printCentered(str, ypos,n,noscroll)
@@ -51,7 +71,7 @@ function UI:setText(color)
 end
 
 function UI:update()
-  local back = term.getBackgroundColor()
+--  local back = term.getBackgroundColor()
   --if self.pane.proto.background then
   --self.term.setBackgroundColor(self.pane.proto.background) end
   self.pane:applyColors(self)

@@ -4,8 +4,8 @@ local Panel = {xpos=1,ypos=1,id="panel"}
 
 local proto = {id="proto"}
 
-function Panel:new(o)
-  local o = o or {content = {},index = {}}
+function Panel:new()
+  local o = {content = {},index = {}}
   setmetatable(o, self)
   self.__index = self
   o.id="panel"..panelIndex
@@ -25,34 +25,64 @@ end
 
 function proto:color(out)
   if self.background then
---    out.write("app back1",0)sleep(1)
     out.setBackgroundColor(self.background)
---    out.write("app back2",0)sleep(1)
---  else out.write("txt not ppld",0)sleep(1)
   elseif self.proto.background then
     out.setBackgroundColor(self.proto.background)
   end
   if self.textColor then
---    out.write("app text1",0)sleep(1)
     out.setTextColor(self.textColor)
---    out.write("app text2",0)sleep(1)
---  else out.write("txt not ppld",0)sleep(1)
   elseif self.proto.textColor then
     out.setTextColor(self.proto.textColor)
   end
-   --print("Coloring"..self.proto.id)sleep(1)
---  print("writing: "..self.text)sleep(1)
-  --out.setTextColor(colors.black)
---  out.write(self.text.."2")sleep(1)
 end
 
-function proto:redraw(ui,noscroll)
-  --error("here",2)
-  local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
-  local back = ui.term.getBackgroundColor()
---  print("hello before color")
-  self:color(ui.term)
---  print("hello after color")sleep(1)
+function Panel:setBackgroundColor(c)
+  self.proto.background = c
+end
+
+function Panel:setTextColor(c)
+  self.proto.textColor = c
+end
+
+local function setColors(term,back,text)
+  term.setBackgroundColor(back)
+  term.setTextColor(text)
+end
+
+function proto:colorFocus(out)
+  local b = self.background
+  local t = self.textColor
+  local bp = self.proto.background
+  local tp = self.proto.background
+  if b then
+    if t then
+      setColors(out,t,b)
+    elseif tp then
+      setColors(out,tp,b)
+    else
+      setColors(out,out.getTextColor(),b)
+    end
+  elseif bp then
+    if t then
+      setColors(out,t,bp)
+    elseif tp then
+      setColors(out,tp,bp)
+    else
+      setColors(out,out.getTextColor(),b)
+    end
+  else
+    b = out.getBackgroundColor()
+    if t then
+      setColors(out,t,b)
+    elseif tp then
+      setColors(out,tp,b)
+    else
+      setColors(out,out.getTextColor(),b)
+    end
+  end
+end
+
+function proto:write(ui,noscroll)
   local x,y = self:setCursor(ui)
   local w,h = ui.term.getSize()
   local counter = 0
@@ -69,9 +99,25 @@ function proto:redraw(ui,noscroll)
   else
     counter = ui:write(self.text,noscroll)
   end
+  return counter
+end
+
+function proto:redraw(ui,noscroll,focus)
+  local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
+  local back = ui.term.getBackgroundColor()
+  if focus then
+    self:colorFocus(ui.term)
+  else
+    self:color(ui.term)
+  end
+  local counter = self:write(ui,noscroll)
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)
   return counter
+end
+
+function proto:drawFocus(ui,noscroll)
+  return self:redraw(ui,noscroll,true)
 end
 
 function proto:setCursor(ui)
@@ -154,8 +200,11 @@ function Panel:applyProto(c)
     c.proto = self.proto
     if not c.redraw then
     c.redraw = c.proto.redraw end
+    c.drawFocus = c.proto.drawFocus
     c.color = c.proto.color
+    c.colorFocus = c.proto.colorFocus
     c.setCursor = c.proto.setCursor
+    c.write = c.proto.write
   end
 --  local n = {__index = self.proto}
 --  local m = getmetatable(c)
@@ -215,7 +264,7 @@ function List:redraw(ui,noscroll)
   return counter
 end
 
-function List:fromArray(A)
+function List.fromArray(A)
   local l = List:new()
   for _,V in ipairs(A) do
     l:add(Graphic:new({text = V}))

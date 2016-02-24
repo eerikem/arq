@@ -9,6 +9,14 @@ function Graphic:new(o)
   return o
 end
 
+function Graphic:setTextColor(c)
+  self.textColor = c
+end
+
+function Graphic:setBackgroundColor(c)
+  self.background = c
+end
+
 --function Graphic:positionCursor()
 --  term.setCursorPos(self.x,self.y)
 --end

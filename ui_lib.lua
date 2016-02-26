@@ -31,12 +31,15 @@ end
 
 function UI:add(...)
   local n = 0 
-    print "here"
   for _,obj in ipairs(arg) do
     local o = self.pane:add(obj)
     n = n + self:draw(o)
   end
   return n
+end
+
+function UI:remove(o)
+  self.pane:remove(o)
 end
 
 function UI:printCentered(str, ypos,n,noscroll)

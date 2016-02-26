@@ -5,6 +5,7 @@ local Panel = {xpos=1,ypos=1,id="panel"}
 local proto = {id="proto"}
 
 function Panel:new()
+  --content is a dictionary, index an ordered List
   local o = {content = {},index = {}}
   setmetatable(o, self)
   self.__index = self
@@ -52,8 +53,11 @@ end
 function proto:colorFocus(out)
   local b = self.background
   local t = self.textColor
+  if not self.proto then
+    error(self.id,2)
+  end
   local bp = self.proto.background
-  local tp = self.proto.background
+  local tp = self.proto.textColor
   if b then
     if t then
       setColors(out,t,b)
@@ -186,39 +190,26 @@ function Panel:setContent(...)
 end
 
 function Panel:remove(c)--TODO remove metatable?
-  table.remove(c,self.content[c])
-  self.content[c]=nil
+  if self.content[c] then
+    table.remove(self.index,self.content[c])
+    self.content[c]=nil
+  end
 end
 
 function Panel:applyProto(c)
---  local m = getmetatable(c)
---  if m then self:applyProto(m)
---  else
---    setmetatable(c,{__index = self.proto})
---  end
   if not c.proto then
     c.proto = self.proto
     if not c.redraw then
-    c.redraw = c.proto.redraw end
-    c.drawFocus = c.proto.drawFocus
+      c.redraw = c.proto.redraw end
+    if not c.drawFocus then
+      c.drawFocus = c.proto.drawFocus end
     c.color = c.proto.color
     c.colorFocus = c.proto.colorFocus
     c.setCursor = c.proto.setCursor
     c.write = c.proto.write
   end
---  local n = {__index = self.proto}
---  local m = getmetatable(c)
---  if m then
---    setmetatable(n,m)
---  end
---  setmetatable(c,n)
 end
 
---function Panel:add(c)
---  self:applyProto(c)
---  table.insert(self.index,c)
---  self.content[c]=table.maxn(self.index)
---end
 
 function Panel:add(c)
 --  local o = {__index==c}
@@ -229,12 +220,6 @@ function Panel:add(c)
   table.insert(self.index,o)
   self.content[o]=table.maxn(self.index)
   return o
-end
-
-
-function Panel:redrawFocus()
-  self:setColors(colors.gray,colors.lightGray)
-  return self:draw()
 end
 
 local List = Panel:new()

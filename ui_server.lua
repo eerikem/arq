@@ -17,8 +17,8 @@ function Server.init(term,name)
   win.setCursorBlink(true)
   local ui = UI:new(win)
   ui.name = name
-  ui:setBackground(colors.gray)
-  ui:setText(colors.lightGray)
+  ui:setBackground(colors.black)
+  ui:setText(colors.gray)
   local label = Graphic:new(ui.name)
   label.align = "center"
   ui:add(label)
@@ -67,7 +67,7 @@ function Server.handle_cast(Request,State)
       EVE.subscribe("events",event)
     elseif State.events[Request[1]] then --todo generic event subscriber handler
       local co = State.events[Request[1]][1]--todo for each
-      local event, dir, x, y unpack(Request)
+      local event, dir, x, y = unpack(Request)
       if dir == 1 then
         VM.send(co,"scroll_down")
       else

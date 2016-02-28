@@ -1,18 +1,37 @@
 local panelIndex = 0
 local protoIndex = 0
-local Panel = {xpos=1,ypos=1,id="panel"}
+local Panel = {xpos=1,ypos=1,id="panel",height = 0}
 
 local proto = {id="proto"}
 
 function Panel:new()
   --content is a dictionary, index an ordered List
-  local o = {content = {},index = {}}
+  local o = {content = {},index = {},reactor = Reactor:new()}
   setmetatable(o, self)
   self.__index = self
   o.id="panel"..panelIndex
   panelIndex = panelIndex + 1
   o.proto = proto:new()
+  o:registerPanelHandlers()
   return o
+end
+
+function Panel:registerPanelHandlers()
+  local handler = function(_,y)
+    local pos = (self.ypos - 1)
+    for _,o in ipairs(self.index) do
+--      print("height: "..o.height)
+      pos = pos + o.ypos - 1
+      local last = pos
+      pos = pos + o.height
+--      print("last: "..last.." pos: "..pos.." search: "..y)sleep(1)
+      if y > last and y <= pos then
+        o.reactor:handleEvent("selected",y)
+        return
+      end
+    end
+  end
+  self.reactor:register("selected",handler)
 end
 
 function proto:new(o)
@@ -84,6 +103,13 @@ function proto:colorFocus(out)
       setColors(out,out.getTextColor(),b)
     end
   end
+  
+  if self.proto.backgroundFocus then
+    out.setBackgroundColor(self.proto.backgroundFocus)
+  end
+  if self.proto.textFocus then
+    out.setTextColor(self.proto.textFocus)
+  end
 end
 
 function proto:write(ui,noscroll)
@@ -115,6 +141,7 @@ function proto:redraw(ui,noscroll,focus)
     self:color(ui.term)
   end
   local counter = self:write(ui,noscroll)
+  self.height = counter + 1
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)
   return counter
@@ -159,6 +186,7 @@ function Panel:drawSubset(ui,start,num)
     start = start + 1
     num = num - 1
   end
+  self.height = c
   return c
 end
 
@@ -169,6 +197,22 @@ function Panel:redraw(ui,noscroll)
   local back = ui.term.getBackgroundColor()
   self:applyColors(ui)
   local x = self:setCursor(ui)
+  if self.width then
+    local X,Y = ui.term.getCursorPos()
+    local w = self.width
+    if w == "max" then
+      w = ui.term.getSize() end
+--    print("Panel height: "..self.height) sleep(2)
+    for n=1, self.height do
+      for m=1, w do
+        ui.term.write(" ")
+      end
+      incCursorPos(ui.term,x)
+    end
+    ui.term.setCursorPos(X,Y)
+--    print("finished wiping panel")sleep(2)
+  end
+  
   local first = true
   local lineCounter = 0
   for _,V in ipairs(self.index) do
@@ -176,7 +220,9 @@ function Panel:redraw(ui,noscroll)
     else incCursorPos(ui.term,x)
     lineCounter = lineCounter + 1 end
     lineCounter = lineCounter + V:redraw(ui,noscroll)
+--    write("Panel Draw finished item")
   end
+  self.height = lineCounter + self.ypos
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)
   return lineCounter
@@ -246,6 +292,7 @@ function List:redraw(ui,noscroll)
     else incCursorPos(ui.term,x) counter = counter + 1 end
     counter = counter + V:redraw(ui,noscroll)
   end
+  self.height = counter
   return counter
 end
 

@@ -1,0 +1,36 @@
+local Reactor = {run = true}
+
+function Reactor:new()
+  local o = {handlers = {}}
+  setmetatable(o,self)
+  self.__index = self
+  return o
+end
+
+function Reactor:stop() self.run = false end
+function Reactor:run() self.run = true end
+
+function Reactor:remove(h)
+  if not h or not h.id then return end
+  self.handlers[h.id] = nil
+end
+
+function Reactor:register(event,h)
+--  print("registering "..event)
+--  sleep(1)
+  if not self.handlers[event] then
+    self.handlers[event] = h
+  else error("event: "..event.." already registered",2)
+  end
+end
+
+function Reactor:handleEvent(...)
+  if arg[1] and self.handlers[arg[1]] then
+    local handler = self.handlers[arg[1]]
+    handler(unpack(arg))
+  else
+    error("reactor received bad event")
+  end
+end
+
+return Reactor

@@ -2,8 +2,13 @@
 local Server = {}
 EVE = Server
 
+--print = function() end
+--write = function() end
+--sleep = function() end
+
 VM = require "vm"
 --UI = require "ui"
+Reactor = require "reactor"
 UI = require "ui_lib"
 gen_server = require "gen_server"
 ui_server = require "ui_server"
@@ -50,8 +55,8 @@ VM.init()
 local Li = Server.start_link()
 VM.register("events",Li)
 local Ui = Server.subscriber(Li,ui_sup)
-local write = ui_sup.statusWindow("terminal")
-VM.log = write
+--local write = ui_sup.statusWindow("terminal")
+--VM.log = write
 ui_sup.app("terminal")
 local write2 = ui_sup.statusWindow("monitor_4")
 write2("I am here")

@@ -1,4 +1,5 @@
-Obj, List = require 'ui_obj'
+local Client = require "ui_sup_menu"
+
 local Server = {}
 
 function Server.start_link(Sup)
@@ -94,24 +95,7 @@ function Server.newWindow(name,w,h)
 end
 
 function Server.app(Co)
-  local ui = ui_sup.newWindow(Co)
-  local l = List.fromArray(Server.getUInames())
-  ui:setBackground(colors.gray)
-  ui:setText(colors.lightGray)
-  local t = Graphic:new("UI List")
-  t.align="center"
-  t.ypos = 2
-  l.xpos = 2
-  l.ypos = 1
-  t.background = colors.lightGray
-  t.textColor = colors.gray
-  ui.term.reposition(10,5,11,8)
-  ui:add(t)
-  --ui:add(l)
-  local m = Menu.fromList(l)
-  --m.align = "left"
-  ui:add(m)
-  ui:update()
+  return Client:new(Co)
 end
 
 function Server.statusWindow(Co)
@@ -172,18 +156,19 @@ function Server.statusWindow(Co)
     end
   end
   )
+ 
   --Register scroll listeners to parent.
   ui_server.listen(Co,"mouse_scroll",co)
   
   local send = function(msg)
     VM.send(co,msg) end
-  local scroll = function(dir)
-    if dir == "up" then
-      VM.send(co,"scroll_up")
-    elseif dir == "down" then
-      VM.send(co,"scoll_down")
+    local scroll = function(dir)
+      if dir == "up" then
+        VM.send(co,"scroll_up")
+      elseif dir == "down" then
+        VM.send(co,"scoll_down")
+      end
     end
-  end
   return send
 end
 

@@ -1,4 +1,4 @@
-local Graphic = {text = "", xpos = 1, ypos = 1}
+local Graphic = {text = "", xpos = 1, ypos = 1,height = 1}
 
 function Graphic:new(o)
   if type(o)=="string" then
@@ -6,6 +6,7 @@ function Graphic:new(o)
   local o = o or {}
   setmetatable(o, self)
   self.__index = self
+  o.reactor = Reactor:new()
   return o
 end
 
@@ -15,6 +16,11 @@ end
 
 function Graphic:setBackgroundColor(c)
   self.background = c
+end
+
+function Graphic:setOnSelect(ui,handler)
+  self.reactor:register("selected",handler)
+  ui:register(self,"selected")
 end
 
 --function Graphic:positionCursor()

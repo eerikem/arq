@@ -12,6 +12,7 @@ console.setCursorPos(1,1)
 console.setCursorBlink(true)
 
 luaunit = require 'luaunit'
+Reactor = require 'reactor'
 UI = require 'ui_lib'
 Graphic = require 'graphic'
 Panel, List = require 'ui_obj'
@@ -65,11 +66,61 @@ end
 --  ui:add(l)
 --  ui:update()
 ----  sleep(1)
---  l:add(t)
+--  l:add(TITLE)
 --  ui:update()
-----  sleep(2)
+--  sleep(1)
 --end
-
+--
+--function test_mouse_listener()
+--  local pressed = false
+--  local handler = function(e) pressed = true end
+--  local handler2 = function(e) pressed = false end
+--  local g = Graphic:new("A really long button is here that should wrap around button")
+--  luaunit.assertEquals(g.height,1)
+--  ui:add(g)
+--  local h = Graphic:new("Button2")
+--  ui:add(h)
+--  luaunit.assertEquals(g.height,3)
+--  g:setOnSelect(ui,handler)
+--  h:setOnSelect(ui,handler2)
+--  local x = ui.term.getPosition()
+--  ui.reactor:handleEvent("mouse_touch",x,5)
+--  luaunit.assertFalse(pressed)
+--  ui.reactor:handleEvent("mouse_touch",x,1)
+--  luaunit.assertTrue(pressed)
+--  ui.reactor:handleEvent("mouse_touch",x,4)
+--  luaunit.assertFalse(pressed)
+--end
+--
+--function test_button_list()
+--  local button1 = false
+--  local button2 = false
+--  local handler1 = function(e) button1 = not button1 end
+--  local handler2 = function(e) button2 = not button2 end
+--  local a = Graphic:new("Button 1")
+--  local b = Graphic:new("Button 2")
+--  local l = List:new()
+--  l.ypos = 2
+--  l:add(a)
+--  l:add(b)
+--  b.ypos = 3
+--  l:add(a)
+--  a:setOnSelect(ui,handler1)
+--  b:setOnSelect(ui,handler2)
+--  ui:add(l)
+--  ui:update()
+--  local x = ui.term.getPosition()
+--  ui.reactor:handleEvent("mouse_touch",x,2)
+----  sleep(4)
+--  luaunit.assertTrue(button1)
+--  ui.reactor:handleEvent("mouse_touch",x,5)
+----  sleep(4)
+--  luaunit.assertTrue(button2)
+--  ui.reactor:handleEvent("mouse_touch",x,6)
+----  sleep(4)
+--  luaunit.assertFalse(button1)
+--end
+--
 function test_menu()
   local m = Menu.fromArray({"Item1","Item3","Item2"})
   luaunit.assertEquals(#m.index,3)
@@ -88,24 +139,31 @@ function test_menu()
   sleep(1)
   m.selected = 3
   ui:update()
-  m:addListener()
-  sleep(3)
+  m:link(ui)
+  local x,y = ui.term.getPosition()
+  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+  sleep(1)
+  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+  sleep(1)
+  ui.reactor:handleEvent("scroll","scroll_up",x,y)
+  sleep(1)
+  ui.reactor:handleEvent("")
 end
-
-local function assertColors(back,text)
-  return function(self,ui,noscroll,focus)
-    if focus then
-      self:colorFocus(ui.term)
-    else
-      self:color(ui.term)
-    end
-    local b = ui.term.getBackgroundColor()
-    local t = ui.term.getTextColor()
-    luaunit.assertEquals(b,back)
-    luaunit.assertEquals(t,text)
-    return self.proto.redraw(self,ui,noscroll,focus)
-  end
-end
+--
+--local function assertColors(back,text)
+--  return function(self,ui,noscroll,focus)
+--    if focus then
+--      self:colorFocus(ui.term)
+--    else
+--      self:color(ui.term)
+--    end
+--    local b = ui.term.getBackgroundColor()
+--    local t = ui.term.getTextColor()
+--    luaunit.assertEquals(b,back)
+--    luaunit.assertEquals(t,text)
+--    return self.proto.redraw(self,ui,noscroll,focus)
+--  end
+--end
 --
 --function test_color_inheritence()
 --  local g = Graphic:new("The Text")

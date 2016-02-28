@@ -3,9 +3,12 @@ local UI = {}
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {pane = Panel:new(),term = term}
+  local o = {pane = Panel:new(),term = term,reactor = Reactor:new()}
   setmetatable(o,self)
   self.__index = self
+  
+  o:registerUIListeners()
+  
   return o
 end
 
@@ -33,6 +36,8 @@ function UI:add(...)
   local n = 0 
   for _,obj in ipairs(arg) do
     local o = self.pane:add(obj)
+    if #self.pane.index > 1 then
+    incCursorPos(self.term,1) end
     n = n + self:draw(o)
   end
   return n
@@ -170,6 +175,30 @@ function UI:write( sText,noscroll)
   end
   
   return nLinesPrinted
+end
+
+function UI:register(obj,event)
+  if event == "selected" then
+    local handler = function (_x,y) self.pane.reactor:handleEvent("selected",y) end
+    --todo already done in registerUIListeners
+  elseif event == "scroll" then
+    local handler = function (event,direction,x,y)
+      local xpos,ypos = self.term.getPosition()
+      local w,h = self.term.getSize()
+      if x >= xpos and x < xpos + w then
+        if y >= ypos and y < ypos + h then
+          obj.reactor:handleEvent("scroll",direction)        
+        end
+      end 
+    end
+    self.reactor:register(event,handler)
+  end
+end
+
+function UI:registerUIListeners()
+  local event = "mouse_touch"
+  local handler = function(_,x,y) self.pane.reactor:handleEvent("selected",y) end
+  self.reactor:register(event,handler)
 end
 
 return UI

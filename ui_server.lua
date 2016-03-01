@@ -4,14 +4,67 @@
 --gen_server = require 'gen_server'
 --UI = require 'ui'
 
-
+local Prod = require 'producer'
 local Server = {}
 
 function Server.start_link(...)
   return gen_server.start_link(Server,arg,{})
 end
 
+local function handleMouse(Req,State)
+  local event,button,x,y = unpack(Req)
+  VM.log("Received: "..event.." at "..x.." "..y)
+  return State
+end
+
+local function handleTouch(Req,State)
+  local _,x,y = unpack(Req)
+  VM.log(State.ui.name.." touched at "..x.." "..y)
+  return State 
+end
+
+local function resized(_,State)
+  VM.log(State.ui.name.." resized")
+  return State
+end
+
+local UI_Events = {
+  char = function(Req,State)
+    local _,char = unpack(Req)
+    VM.log("Received: "..char)
+    return State end,
+  key = function(Req,State)
+    local _,keycode,helddown = unpack(Req)
+    local msg = keys.getName( keycode )
+    if helddown then msg = msg.." down" end
+    VM.log(msg)
+    return State 
+    end,
+  key_up = function(Req,State)
+    local _,keycode = unpack(Req)
+    VM.log(keys.getName( keycode ).." up")
+    return State 
+    end,
+  paste = function(Req,State)
+    local _,string = unpack(Req)
+    VM.log("Pasted: "..string)
+    return State
+    end,
+  mouse_click = handleMouse,
+  mouse_up = handleMouse,
+  mouse_scroll = handleMouse,
+  mouse_drag = handleMouse,
+  monitor_touch = handleTouch,
+  monitor_resize = resized,
+  term_resize = resized
+}
+
 function Server.init(term,name)
+  local reactor = Reactor:new()
+  for event,handler in pairs(UI_Events) do
+    reactor:register(event,handler)
+  end
+
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
   win.setCursorBlink(true)
@@ -23,7 +76,7 @@ function Server.init(term,name)
   label.align = "center"
   ui:add(label)
   ui:update()
-  return {native = term, ui = ui,focus = win,stack = {win},windows={},events={}}
+  return {native = term, ui = ui,focus = win,stack = {win},windows={},events={},producer=Prod:new(),reactor = reactor}
 end
 
 local function newWindow(State,Co,w,h)
@@ -52,19 +105,21 @@ end
 
 function Server.handle_cast(Request,State)
   if type(Request) == "table" then
-    if Request[1] == "update" then
+    local event = Request[1]
+    if event == "update" then
       local ui = Request[2]
       ui:update()--TODO Redraw the stack
       --State.windows[]()
-    elseif Request[1]== "monitor_touch" then
-      State.ui:printCentered("touch",2)
-      --State.ui:update()
-    elseif Request[1]== "register" then
+    elseif event == "register" then
       local event = Request[2]
       local co = Request [3]
       HashArrayInsert(State.events,event,co)
       VM.log("Subscribed new co to "..event)
       EVE.subscribe("events",event)
+    elseif UI_Events[event] then
+--      VM.log(State.ui.name.." got "..textutils.serialize(Request))
+--      VM.log("Logging: "..table.concat({"something",unpack(Request) }," "))
+      return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --todo generic event subscriber handler
       local co = State.events[Request[1]][1]--todo for each
       local event, dir, x, y = unpack(Request)

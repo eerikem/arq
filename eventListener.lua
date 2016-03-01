@@ -1,28 +1,32 @@
 
 local Server = {}
-EVE = Server
-
---print = function() end
---write = function() end
---sleep = function() end
-
-VM = require "vm"
---UI = require "ui"
-Reactor = require "reactor"
-UI = require "ui_lib"
-gen_server = require "gen_server"
-ui_server = require "ui_server"
-ui_sup = require "ui_supervisor"
-Graphic = require "graphic"
-Panel, List = require "ui_obj"
-Menu = require "ui_menu"
 
 function Server.start_link()
-  return gen_server.start_link(Server,{},{})
+  return gen_server.start_link(Server,{},{},"events")
 end
 
+local UI_Events = {
+  char = ui_sup.sendOsEvent,
+  key = ui_sup.sendOsEvent,
+  key_up = ui_sup.sendOsEvent,
+  paste = ui_sup.sendOsEvent,
+  peripheral=ui_sup.sendOsEvent,
+  peripheral_detach = ui_sup.sendOsEvent,
+  mouse_click = ui_sup.sendOsEvent,
+  mouse_up = ui_sup.sendOsEvent,
+  mouse_scroll = ui_sup.sendOsEvent,
+  mouse_drag = ui_sup.sendOsEvent,
+  monitor_touch = ui_sup.sendOsEvent,
+  monitor_resize = ui_sup.sendOsEvent,
+  term_resize = ui_sup.sendOsEvent
+}
+
 function Server.init()
-  return {}
+  local reactor = Reactor:new()
+  for event,handler in pairs(UI_Events) do
+    reactor:register(event,handler)
+  end
+  return {reactor = reactor}
 end
 
 function Server.handle_call(Request,From,State)
@@ -30,15 +34,24 @@ function Server.handle_call(Request,From,State)
 end
 
 function Server.handle_cast(Request,State)
-  if Request[1]=="subscribe" then
+  local event = Request[1]
+  if event=="subscribe" then
     HashArrayInsert(State,Request[3],Request[2])
+  elseif UI_Events[event] then
+    State.reactor:handleEvent(unpack(Request))
   else
-    if State[Request[1]] then
-      for _,Co in ipairs(State[Request[1]]) do
-        gen_server.cast(Co,Request)
-      end
-    end
+    VM.log("events received unhandled: "..event)
   end
+--     then
+--    VM.log("sending "..event)
+--    State.reactor.handleEvent(unpack(Request))
+--  else
+--    if State[Request[1]] then
+--      for _,Co in ipairs(State[Request[1]]) do
+--        gen_server.cast(Co,Request)
+--      end
+--    end
+--  end
   --return "noreply", State
   return State
 end
@@ -49,34 +62,6 @@ end
 
 function Server.subscriber(Co,Module)
   return Module.start_link(Co)
-end
-
-VM.init()
-local Li = Server.start_link()
-VM.register("events",Li)
-local Ui = Server.subscriber(Li,ui_sup)
---local write = ui_sup.statusWindow("terminal")
---VM.log = write
-ui_sup.app("terminal")
-local write2 = ui_sup.statusWindow("monitor_4")
-write2("I am here")
---write("hello1")
---write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
---write("error: this is an error error error error error error error error error error error2")
---write("hello2")
---write("hello3")
---write("hello4")
---write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
---write("error: this is an error error error error error error error error error error error2")
-
---scroll("up")
---scroll("up")
---scroll("up")
---write("hello5")
-
-while true do
-  --VM.flush()
-  gen_server.cast(Li,{os.pullEvent()})
 end
 
 

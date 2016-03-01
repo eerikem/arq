@@ -10,22 +10,46 @@ local function link_ui(term,name)
   return ui_server.start_link(term,name)
 end
 
-local events = {
-  char = nil,
-  key = nil,
-  key_up = nil,
-  paste = nil,
+local function toTerminal(...) gen_server.cast("terminal",{...}) end
+local function toUI(event,name,...) gen_server.cast(name,{event,...}) end
+
+local UI_Events = {
+  char = toTerminal,
+  key = toTerminal,
+  key_up = toTerminal,
+  paste = toTerminal,
   peripheral=nil,
   peripheral_detach=nil,
-  mouse_click = function(Uis,number,x,y) gen_server.cast(Uis.terminal,{"click",x,y})end,
-  mouse_up = nil,
-  mouse_scroll = nil,
-  mouse_drag = nil,
-  monitor_touch = function(Uis,name,x,y)
-    gen_server.cast(Uis[name],{"monitor_touch",name,x,y}) end,
-  monitor_resize = nil,
-  term_resize = nil
+  mouse_click = toTerminal,
+  mouse_up = toTerminal,
+  mouse_scroll = toTerminal,
+  mouse_drag = toTerminal,
+  monitor_touch = toUI,
+  monitor_resize = toUI,
+  term_resize = toTerminal
 }
+
+local function subscribe(Co,event)
+  EVE.subscribe(Co,event)
+end
+
+function Server.init(eventCo)
+  local reactor = Reactor:new()
+  for event,handler in pairs(UI_Events) do
+    reactor:register(event,handler)
+  end
+  local Uis = {terminal = link_ui(term.current(),"Terminal")}
+  VM.register("terminal",Uis.terminal)
+--  subscribe(eventCo,"mouse_click")
+--  subscribe(eventCo,"monitor_touch")
+  for n,name in ipairs(peripheral.getNames()) do
+    if peripheral.getType(name) == "monitor" then
+      Uis[name]=link_ui(peripheral.wrap(name),name)
+      VM.register(name,Uis[name])
+    end
+  end
+  return {uis = Uis, events = eventCo,reactor = reactor}
+end
 
 local getNames = function(State)
   local r = {}
@@ -45,8 +69,8 @@ function Server.handle_call(Request,From,State)
 end
 
 local function parse(State,event,...)
-  if events[event] then
-    events[event](State.uis,unpack(arg))
+  if UI_Events[event] then
+    UI_Events[event](State.uis,unpack(arg))
   else
     error("received unhandled event: "..event)
   --TODO default event and terminate?
@@ -55,26 +79,17 @@ local function parse(State,event,...)
 end
 
 function Server.handle_cast(Request,State)
-  --return "noreply", parse(State,Request)
-  return parse(State,unpack(Request))
-end
-
-local function subscribe(Co,event)
-  EVE.subscribe(Co,event)
-end
-
-function Server.init(eventCo)
-  local Uis = {terminal = link_ui(term.current(),"Terminal")}
-  VM.register("terminal",Uis.terminal)
-  subscribe(eventCo,"mouse_click")
-  subscribe(eventCo,"monitor_touch")
-  for n,name in ipairs(peripheral.getNames()) do
-    if peripheral.getType(name) == "monitor" then
-      Uis[name]=link_ui(peripheral.wrap(name),name)
-      VM.register(name,Uis[name])
-    end
+  local event = Request[1]
+  if UI_Events[event] then
+    State.reactor:handleEvent(unpack(Request))
+    return State
+  else
+    return parse(State,unpack(Request))
   end
-  return {uis = Uis, events = eventCo}
+end
+
+function Server.sendOsEvent(...)
+  gen_server.cast("ui_sup",{...})
 end
 
 function Server.getUInames()
@@ -143,8 +158,10 @@ function Server.statusWindow(Co)
           ui:redraw() end
         pos = table.maxn(counter) + 1
         current = pos
-        if first then first = false else
-        incCursorPos(ui.term,1) end
+        if first then first = false
+--        else
+--        incCursorPos(ui.term,1)
+        end
         MSG_CNT = MSG_CNT + 1
         if string.find(string.lower(str),'error') then
           n = ui:add(Graphic:new({text = MSG_CNT.." "..str,textColor=colors.red}))

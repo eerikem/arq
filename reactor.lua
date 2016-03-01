@@ -27,7 +27,16 @@ end
 function Reactor:handleEvent(...)
   if arg[1] and self.handlers[arg[1]] then
     local handler = self.handlers[arg[1]]
-    handler(unpack(arg))
+    return handler(unpack(arg))
+  else
+    error("reactor received bad event")
+  end
+end
+
+function Reactor:handleReq(Req,State)
+  if Req[1] and self.handlers[Req[1]] then
+    local handler = self.handlers[Req[1]]
+    return handler(Req,State)
   else
     error("reactor received bad event")
   end

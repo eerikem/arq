@@ -13,7 +13,19 @@ end
 
 local function handleMouse(Req,State)
   local event,button,x,y = unpack(Req)
-  VM.log("Received: "..event.." at "..x.." "..y)
+  if event == "mouse_scroll" then
+    if button == -1 then
+      State.focus.reactor:handleEvent("scroll","scroll_up",x,y)
+    elseif button == 1 then
+      State.focus.reactor:handleEvent("scroll","scroll_down",x,y)
+    else
+      error("Bad mouse_scroll received")
+    end
+  elseif event == "mouse_click" then
+    State.focus.reactor:handleEvent("mouse_click",button,x,y)
+  else
+    VM.log("UI_Server Received: "..event.." at "..x.." "..y)
+  end
   return State
 end
 
@@ -59,24 +71,36 @@ local UI_Events = {
   term_resize = resized
 }
 
-function Server.init(term,name)
-  local reactor = Reactor:new()
-  for event,handler in pairs(UI_Events) do
-    reactor:register(event,handler)
-  end
-
+local function initNativeUI(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
   win.setCursorBlink(true)
   local ui = UI:new(win)
   ui.name = name
-  ui:setBackground(colors.black)
-  ui:setText(colors.gray)
+  ui:setBackground(colors.gray)
+  ui:setText(colors.lightGray)
   local label = Graphic:new(ui.name)
   label.align = "center"
+--  label.ypos = h/2
   ui:add(label)
   ui:update()
-  return {native = term, ui = ui,focus = win,stack = {win},windows={},events={},producer=Prod:new(),reactor = reactor}
+  return ui
+end
+
+function Server.init(term,name)
+
+  --TODO reactor sends events to coroutine handlers
+  local reactor = Reactor:new()
+  for event,handler in pairs(UI_Events) do
+    reactor:register(event,handler)
+  end
+
+  local ui = initNativeUI(term,name)
+  -- The term.redraw functions indexed by ui
+  local windows = {}
+  windows[ui] = ui.term.redraw
+  
+  return {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new(),reactor = reactor}
 end
 
 local function newWindow(State,Co,w,h)
@@ -87,10 +111,23 @@ local function newWindow(State,Co,w,h)
   local ui = UI:new(window.create(State.native,1,1,w,h))
   ui.native = State.native
   State.windows[ui] = ui.term.redraw --TODO window management?
-  ui.redraw = function(self)
+  ui.term.redraw = function(self)
     gen_server.cast(Co,{"update",self})
   end
+  table.insert(State.stack,ui)
+  State.focus = ui 
   return ui
+end
+
+local i = 0
+
+local function redrawStack(State,ui)
+  i = i + 1
+  for _,UI in ipairs(State.stack) do
+    State.windows[UI]()
+--    VM.log("Here "..i.." "..UI.pane.id)
+  end
+--  if i == 2 then error("reached iteration "..i) end
 end
 
 function Server.handle_call(Request,From,State)
@@ -108,8 +145,7 @@ function Server.handle_cast(Request,State)
     local event = Request[1]
     if event == "update" then
       local ui = Request[2]
-      ui:update()--TODO Redraw the stack
-      --State.windows[]()
+      redrawStack(State,ui)
     elseif event == "register" then
       local event = Request[2]
       local co = Request [3]
@@ -117,8 +153,6 @@ function Server.handle_cast(Request,State)
       VM.log("Subscribed new co to "..event)
       EVE.subscribe("events",event)
     elseif UI_Events[event] then
---      VM.log(State.ui.name.." got "..textutils.serialize(Request))
---      VM.log("Logging: "..table.concat({"something",unpack(Request) }," "))
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --todo generic event subscriber handler
       local co = State.events[Request[1]][1]--todo for each

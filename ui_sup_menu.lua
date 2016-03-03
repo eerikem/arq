@@ -32,9 +32,8 @@ function Client:new(Co)
   m:link(ui)
   ui:align("center")
   ui:update()
-  sleep(1)
-  ui.reactor:handleEvent("scroll","scroll_down",25,10)
-  sleep(1)
+  local x,y = ui.term.getPosition()
+  VM.log(x.." "..y)
 --  print("height: "..body.height)sleep(2)
 end
 

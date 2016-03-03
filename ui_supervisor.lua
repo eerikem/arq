@@ -120,7 +120,7 @@ function Server.statusWindow(Co)
   ui:align("bottom","left")
   ui:setBackground(colors.black)
   ui:setText(colors.gray)
-  ui:redraw()
+  ui:update()
   ui.term.setCursorBlink(true)
   local co = VM.spawnlink(function()
     local counter = {}
@@ -155,7 +155,7 @@ function Server.statusWindow(Co)
       
       else
         if current ~= pos then
-          ui:redraw() end
+          ui:update() end
         pos = table.maxn(counter) + 1
         current = pos
         if first then first = false

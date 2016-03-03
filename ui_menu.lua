@@ -43,6 +43,7 @@ function Menu:redraw(ui,noscroll)
   self:applyColors(ui)
   local first = true
   local counter = 0
+  local maxWidth = 0
   for n,V in ipairs(self.index) do
     if first then first = false
     else incCursorPos(ui.term,x) counter = counter + 1 end
@@ -51,8 +52,11 @@ function Menu:redraw(ui,noscroll)
     else
       counter = counter + V:redraw(ui,noscroll)
     end
+    if V.width > maxWidth then
+      maxWidth = V.width end
 --    write("count = "..counter)sleep(1)
   end
+  self.width = maxWidth
   self.height = counter + 1
   return counter
 end
@@ -73,6 +77,20 @@ function Menu:dec()
   end
 end
 
+local function selectedHandler(ui,menu)
+  return function(_,button,x,y)
+    for _,obj in ipairs(menu.index) do
+      --TODO make this generic operation
+      if obj.absY <= y and y < obj.absY + obj.height then
+        print("Changing selected to "..menu.content[obj])sleep(1)
+        menu.selected = menu.content[obj]
+        ui:update()
+        return obj.reactor:handleEvent("selected")
+      end
+    end
+  end
+end
+
 local function scrollHandler(ui,menu)
   return function(_,direction)
     if direction == "scroll_up" then
@@ -86,16 +104,20 @@ local function scrollHandler(ui,menu)
   end
 end
 
-local function itemSelected(e)
-
+local function itemSelected(ui,menu)
+  return function(_,button,x,y)
+    
+  end
 end
 
 function Menu:link(ui)
-  ui:register(self,"selected")
+  ui:register(self,"clickable")
   --self.reactor:register("selected",itemSelected)
   ui:register(self,"keys")
   ui:register(self,"scroll")
   self.reactor:register("scroll",scrollHandler(ui,self))
+  self.reactor.handlers["selected"]=selectedHandler(ui,self)
+--  self.reactor:register("selected",selectedHandler(ui,self))
 end
 
 return Menu

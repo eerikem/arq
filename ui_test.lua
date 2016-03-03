@@ -147,7 +147,10 @@ function test_menu()
   sleep(1)
   ui.reactor:handleEvent("scroll","scroll_up",x,y)
   sleep(1)
-  ui.reactor:handleEvent("")
+  print(m.index[3].absY)sleep(1)
+  m.index[3].reactor:register("selected",function() print(m.index[3].text.." selected") sleep(1) end)
+  ui.reactor:handleEvent("mouse_click",1,x,5)
+  sleep(1)
 end
 --
 --local function assertColors(back,text)

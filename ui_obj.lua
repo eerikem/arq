@@ -1,6 +1,6 @@
 local panelIndex = 0
 local protoIndex = 0
-local Panel = {xpos=1,ypos=1,id="panel",height = 0}
+local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0}
 
 local proto = {id="proto"}
 
@@ -17,8 +17,9 @@ function Panel:new()
 end
 
 function Panel:registerPanelHandlers()
-  local handler = function(_,y)
+  local handler = function(_,button,x,y)
     local pos = (self.ypos - 1)
+    print("Pane handler here..")sleep(1)
     for _,o in ipairs(self.index) do
 --      print("height: "..o.height)
       pos = pos + o.ypos - 1
@@ -26,8 +27,7 @@ function Panel:registerPanelHandlers()
       pos = pos + o.height
 --      print("last: "..last.." pos: "..pos.." search: "..y)sleep(1)
       if y > last and y <= pos then
-        o.reactor:handleEvent("selected",y)
-        return
+        return o.reactor:handleEvent("selected",button,x,y)
       end
     end
   end
@@ -129,6 +129,13 @@ function proto:write(ui,noscroll)
   else
     counter = ui:write(self.text,noscroll)
   end
+  
+  local x2,y2 = ui.term.getCursorPos()
+  if y2-self.absY == 0 then
+    self.width = x2-self.absX + 1
+  else self.width = ui.term.getSize()
+  end
+  
   return counter
 end
 
@@ -153,6 +160,8 @@ end
 
 function proto:setCursor(ui)
   local x,y = ui.term.getCursorPos()
+  self.absX = x
+  self.absY = y
   x = x + self.xpos - 1
   y = y + self.ypos - 1
   ui.term.setCursorPos(x, y)

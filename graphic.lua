@@ -1,4 +1,4 @@
-local Graphic = {text = "", xpos = 1, ypos = 1,height = 1}
+local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0}
 
 function Graphic:new(o)
   if type(o)=="string" then
@@ -20,7 +20,7 @@ end
 
 function Graphic:setOnSelect(ui,handler)
   self.reactor:register("selected",handler)
-  ui:register(self,"selected")
+  ui:register(self,"selectable")
 end
 
 --function Graphic:positionCursor()

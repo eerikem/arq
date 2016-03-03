@@ -29,7 +29,7 @@ function Reactor:handleEvent(...)
     local handler = self.handlers[arg[1]]
     return handler(unpack(arg))
   else
-    error("reactor received bad event")
+    VM.log("reactor received unhandled event: "..arg[1],2)
   end
 end
 
@@ -38,7 +38,7 @@ function Reactor:handleReq(Req,State)
     local handler = self.handlers[Req[1]]
     return handler(Req,State)
   else
-    error("reactor received bad event")
+    VM.log("reactor received unhandled event: "..Req[1],2)
   end
 end
 

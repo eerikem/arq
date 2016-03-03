@@ -3,7 +3,7 @@ local UI = {}
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {pane = Panel:new(),term = term,reactor = Reactor:new()}
+  local o = {pane = Panel:new(),term = term,reactor = Reactor:new(),selectables={}}
   setmetatable(o,self)
   self.__index = self
   
@@ -99,8 +99,8 @@ function UI:align(...)
     v[pos]=true
   end
   if v["center"] then
-    x = (px - w + 1) / 2
-    y = (py - h + 1) / 2 end
+    x = math.floor((px - w + 1) / 2)
+    y = math.floor((py - h + 1) / 2) end
   if v["bottom"] then
     y = py-h + 1 end
   if v["top"] then
@@ -177,10 +177,11 @@ function UI:write( sText,noscroll)
   return nLinesPrinted
 end
 
+
 function UI:register(obj,event)
-  if event == "selected" then
-    local handler = function (_x,y) self.pane.reactor:handleEvent("selected",y) end
-    --todo already done in registerUIListeners
+  if event == "clickable" then
+    self.selectables[obj]=true
+    
   elseif event == "scroll" then
     local handler = function (event,direction,x,y)
       local xpos,ypos = self.term.getPosition()
@@ -194,11 +195,29 @@ function UI:register(obj,event)
     self.reactor:register(event,handler)
   end
 end
+ 
 
 function UI:registerUIListeners()
-  local event = "mouse_touch"
-  local handler = function(_,x,y) self.pane.reactor:handleEvent("selected",y) end
-  self.reactor:register(event,handler)
+  local function clickHandler(_,button,x,y)
+    local xpos,ypos = self.term.getPosition()
+    y = y - ypos + 1
+    x = x - xpos + 1
+    VM.log("Got "..table.concat({button,x,y}," "))sleep(1)
+    for obj,_ in pairs(self.selectables) do
+    --TODO make this generic operation
+      VM.log("Checking "..obj.absY.." and "..obj.height)
+      if obj.absY <= y and y < obj.absY + obj.height then
+        VM.log("X: "..x.." absX: "..obj.absX.." width: "..obj.width)
+        if x >= obj.absX and x < obj.absX + obj.width then
+          VM.log("sending selected to an obj")
+          obj.reactor:handleEvent("selected",button,x,y)
+        end
+      end
+    end 
+  end
+  
+  
+  self.reactor:register("mouse_click",clickHandler)
 end
 
 return UI

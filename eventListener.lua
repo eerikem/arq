@@ -5,6 +5,8 @@ function Server.start_link()
   return gen_server.start_link(Server,{},{},"events")
 end
 
+local function todo() end
+
 local UI_Events = {
   char = ui_sup.sendOsEvent,
   key = ui_sup.sendOsEvent,
@@ -18,7 +20,8 @@ local UI_Events = {
   mouse_drag = ui_sup.sendOsEvent,
   monitor_touch = ui_sup.sendOsEvent,
   monitor_resize = ui_sup.sendOsEvent,
-  term_resize = ui_sup.sendOsEvent
+  term_resize = ui_sup.sendOsEvent,
+  task_complete = todo
 }
 
 function Server.init()

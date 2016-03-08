@@ -1,5 +1,22 @@
 local UI = {}
 
+local function exec(cmd)
+  if commands then
+    commands.execAsync(cmd)
+  else
+    VM.log("Warning: Not a command computer")
+  end
+end
+
+local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
+local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
+local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+
+function UI:beep()
+  exec(errorSound)
+end
+
+
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
@@ -39,6 +56,11 @@ function UI:add(...)
     if #self.pane.index > 1 then
     incCursorPos(self.term,1) end
     n = n + self:draw(o)
+    self.pane.height = self.pane.height + n
+    if #self.pane.index > 1 then
+      self.pane.height = self.pane.height + 1
+      n = n + 1
+    end
   end
   return n
 end
@@ -49,6 +71,9 @@ end
 
 function UI:printCentered(str, ypos,n,noscroll)
   if not n then n = 0 end
+  if type(n) == "boolean" then noscroll = n n = 0 end
+  --TODO what is n doing here? Use below...
+  --if n then error("what is n?",2) end
   local w,h = self.term.getSize()
   if w >= string.len(str) then
     return n + self:indentLeft(str,w/2 - #str/2,ypos,noscroll)
@@ -116,16 +141,16 @@ function UI:write( sText,noscroll)
   if not sText then error("cannot write nil",2) end
   local w,h = self.term.getSize()    
   local x,y = self.term.getCursorPos()
-  
+  local indent = x
   local nLinesPrinted = 0
   local function newLine()
     if y + 1 <= h then
-      self.term.setCursorPos(1, y + 1)
+      self.term.setCursorPos(indent, y + 1)
     else
       if noscroll then
         return true
       else
-        self.term.setCursorPos(1, h)
+        self.term.setCursorPos(indent, h)
         self.term.scroll(1)
       end
     end
@@ -177,6 +202,43 @@ function UI:write( sText,noscroll)
   return nLinesPrinted
 end
 
+function UI.lineWrap(sText,w,line,room)
+  local line = line or ""
+  local room = room or w
+  local whitespace = string.match( sText, "^[ \t]+" )
+  local x = 1
+  if whitespace then
+    -- Print whitespace
+    if string.len(whitespace) > room then
+      line = line .. string.sub(whitespace,1,room)
+      return line,string.sub(sText,room + 1)
+    else
+      x = string.len(whitespace) + 1
+      line = line..whitespace
+      sText = string.sub( sText, x )
+    end
+  end
+  local newline = string.match( sText, "^\n" )
+  if newline then
+    return line .. "\n", string.sub( sText, 2 )
+  end
+  
+  local text = string.match( sText, "^[^ \t\n]+" )
+  if text then
+    if string.len(text) > w then
+      -- Print a multiline word      
+        return line .. string.sub(text,1,room),string.sub( sText, room + 1 )
+    else
+      -- Print a word normally
+      if string.len(line) + string.len(text) > w then
+        return line, sText
+      end
+    sText = string.sub( sText, string.len(text) + 1 )
+    return UI.lineWrap(sText,w,line .. text,room - string.len(text))
+    end
+  end
+  return line
+end
 
 function UI:register(obj,event)
   if event == "clickable" then
@@ -190,7 +252,7 @@ function UI:register(obj,event)
         if y >= ypos and y < ypos + h then
           obj.reactor:handleEvent("scroll",direction)        
         end
-      end 
+      end
     end
     self.reactor:register(event,handler)
   end

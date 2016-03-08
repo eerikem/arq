@@ -22,8 +22,9 @@ Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
 
-
 VM.init()
+
+
 local Li = EVE.start_link()
 --local Ui = EVE.subscriber(Li,ui_sup)
 local Ui = ui_sup.start_link(Li)

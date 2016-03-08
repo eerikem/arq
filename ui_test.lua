@@ -1,17 +1,23 @@
-local env = {}
-setmetatable(env,{__index = _ENV})
-setfenv(1,env)
-_ENV = getfenv()
-assert(_ENV)
-local VM = require 'vm'
+--local env = {}
+--setmetatable(env,{__index = _ENV})
+--setfenv(1,env)
+--_ENV = getfenv()
+--assert(_ENV)
+VM = require 'vm'
 
 local w,h = term.getSize()
 local console = window.create(term.current(),1,1,w,h)
 console.clear()
 console.setCursorPos(1,1)
 console.setCursorBlink(true)
+function writeConsole(str)
+  console.write(str)
+  incCursorPos(console,1)
+end
 
+gen_server = require 'gen_server'
 luaunit = require 'luaunit'
+ui_server = require 'ui_server'
 Reactor = require 'reactor'
 UI = require 'ui_lib'
 Graphic = require 'graphic'
@@ -26,8 +32,11 @@ TITLE:setTextColor(colors.gray)
 
 function setup_each()
   local w,h = term.getSize()
-  local win = window.create(term.current(),w/2+2,1,w/2,h)
+  local win = window.create(term.current(),w/2+2,1,w/2,h/2)
   win.setBackgroundColor(colors.gray)
+  VM.init()
+  local Co = ui_server.start_link(term.current(),"Terminal")
+  VM.register("terminal",Co)
   ui = UI:new(win)
 end
 
@@ -121,37 +130,129 @@ end
 --  luaunit.assertFalse(button1)
 --end
 --
-function test_menu()
-  local m = Menu.fromArray({"Item1","Item3","Item2"})
-  luaunit.assertEquals(#m.index,3)
-  ui:add(TITLE)
-  m.xpos = 3
-  m.ypos = 2
-  ui:add(m)
-  ui:update()
+--function test_getSize()
+--  local width = 20
+--  local ui = UI:new(window.create(term.current(),1,1,width,8))
+--  ui:setBackground(colors.lightGray)
+--  local t = Graphic:new("TEST HEIGHT")
+--  luaunit.assertEquals({t:getSize(width)},{11,1})
+--  t.xpos = 4
+--  t.ypos = 2
+--  luaunit.assertEquals({t:getSize(width)},{14,2})
+--  t:setTextColor(colors.red)
+--  ui:add(t)
+--  ui:add(Graphic:new("First line is here"))
+--  ui:add(Graphic:new("A single line text"))
+--  local g = Graphic:new("This text ends on a second line just fit")
+--  ui:add(g)
+--  luaunit.assertEquals({g:getSize(width)},{width,2})
+--  ui:update()
+--  luaunit.assertEquals({ui.pane:getSize(width)},{width,6})
+--  ui.pane.xpos = 2
+--  ui.pane.ypos = 2
+--  ui:update()
+--  luaunit.assertEquals({ui.pane:getSize(width)},{width,8})
+--end
+--
+--function test_lineWrap()
+--  local width = 7
+--  local string = "Hello"
+--  luaunit.assertEquals({UI.lineWrap(string,width)},{string})
+--  string = "This is a simple line"
+--  luaunit.assertEquals({UI.lineWrap(string,width)},{"This is ","a simple line"})
+--end
+--
+--function test_drawLine()
+--  local width = 20
+--  local ui = UI:new(window.create(term.current(),1,1,width,9))
+--  ui:setBackground(colors.lightGray)
+--  local t = Graphic:new("TEST DRAWLINE")
+--  t.align = "center"
+--  t:setTextColor(colors.red)
+--  ui:add(t)
+--  ui:add(Graphic:new("First line is here"))
+--  ui:add(Graphic:new("A single line text"))
+--  local g = Graphic:new("This text ends on a second line just fit")
+--  ui:add(g)
+--  luaunit.assertEquals(g:getTextFromLine(2,width),"second line just fit")
+--  ui.pane.xpos = 2
+--  ui:update()
+--  luaunit.assertEquals(g:getTextFromLine(3,width - 1),"fit")
+--  ui.term.setCursorBlink(true)
+--  incCursorPos(ui.term,1)
+--  sleep(1)
+--  ui.pane:drawFromLine(ui,3)
+--end
+
+
+function test_status()
+--  local ui = UI:new(term)
+--  ui:add(Graphic:new("Text starts here"))
+--  ui:add(Graphic:new("Some more text here"))
+--  ui:add(Graphic:new("Text ends on this line"))
+--  ui:update() sleep(1)
+--  ui.pane:drawFromLine(ui,2)
+--  sleep(1)
+--  ui.pane:drawFromLine(ui,3)
+--  sleep(1)
+  
+  local statusBar = require 'statusBar'
+  local status = statusBar:new("terminal",4)
+  status:write("First")
+  luaunit.assertStrContains(status.ui.pane.index[1].text,"First")
+  status:write("Message")writeConsole("hello: "..table.concat({status.ui.pane:getSize(10)}," ").." ")
+  luaunit.assertStrContains(status.ui.pane.index[2].text,"Message")
+  status:write("Message")--write(status.ui.pane.height)
+  status:write("Message")--write(status.ui.pane.height)
+  status:write("Message")
+  status:write("Message")
+  status:write("Last")
   sleep(1)
-  local item4 = Graphic:new("Item4")  
-  local m2 = Menu.fromArray({"Sub1","Sub2"})
-  Menu.inlineOnFocus(item4,m2)
-  m:add(item4)
-  m.selected = 4
-  ui:update()
+  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
   sleep(1)
-  m.selected = 3
-  ui:update()
-  m:link(ui)
-  local x,y = ui.term.getPosition()
-  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
   sleep(1)
-  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
   sleep(1)
-  ui.reactor:handleEvent("scroll","scroll_up",x,y)
+  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
   sleep(1)
-  print(m.index[3].absY)sleep(1)
-  m.index[3].reactor:register("selected",function() print(m.index[3].text.." selected") sleep(1) end)
-  ui.reactor:handleEvent("mouse_click",1,x,5)
-  sleep(1)
+  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
 end
+--
+--function test_menu()
+--  local m = Menu.fromArray({"Item1","Item3","Item2"})
+--  luaunit.assertEquals(#m.index,3)
+--  ui:add(TITLE)
+--  m.xpos = 3
+--  m.ypos = 2
+--  ui:add(m)
+--  ui:update()
+--  sleep(1)
+--  local item4 = Graphic:new("Item4")  
+--  local m2 = Menu.fromArray({"Sub1","Sub2"})
+--  Menu.inlineOnFocus(item4,m2)
+--  m:add(item4)
+--  m.selected = 4
+--  ui:update()
+--  sleep(1)
+--  m.selected = 3
+--  ui:update()
+--  m:link(ui)
+--  local x,y = ui.term.getPosition()
+--  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+--  sleep(1)
+--  ui.reactor:handleEvent("scroll","scroll_down",x,y)
+--  sleep(1)
+--  ui.reactor:handleEvent("scroll","scroll_up",x,y)
+--  sleep(1)
+--  print(m.index[3].absY)sleep(1)
+--  m.index[3].reactor:register("selected",function() print(m.index[3].text.." selected") sleep(1) end)
+--  ui.reactor:handleEvent("mouse_click",1,x,5)
+--  sleep(1)
+--end
 --
 --local function assertColors(back,text)
 --  return function(self,ui,noscroll,focus)

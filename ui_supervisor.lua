@@ -1,4 +1,5 @@
 local Client = require "ui_sup_menu"
+local statusBar = require "statusBar"
 
 local Server = {}
 
@@ -114,79 +115,10 @@ function Server.app(Co)
 end
 
 function Server.statusWindow(Co)
-  local height = 6
-  local MSG_CNT = 0
-  local ui = ui_sup.newWindow(Co,"max",height)
-  ui:align("bottom","left")
-  ui:setBackground(colors.black)
-  ui:setText(colors.gray)
-  ui:update()
-  ui.term.setCursorBlink(true)
-  local co = VM.spawnlink(function()
-    local counter = {}
-    local n, pos = nil, 0
-    local current = pos
-    local first = true
-    while true do
-      local str = VM.receive()
-      local sum = 0
-      if str == "scroll_up" then
-        if current ~= pos then
-          current = current - 1
-          pos = current
-          while sum <height and pos <= table.maxn(counter) do
-            sum = sum + counter[pos]
-            pos = pos + 1
-          end
-          pos = pos - 1
-        else
-          while sum < height and current > 1 do
-            sum = sum + counter[current]--todo handle scroll with empty counter
-            current = current - 1
-          end
-        end
-        if current <= 1 and sum <= height then
-        else
-        ui.term.clear()
-        ui.term.setCursorPos(1,1)
-        ui.pane:drawSubset(ui,current,pos-current+1)
-        end
-      elseif str == "scroll_down" then
-      
-      else
-        if current ~= pos then
-          ui:update() end
-        pos = table.maxn(counter) + 1
-        current = pos
-        if first then first = false
---        else
---        incCursorPos(ui.term,1)
-        end
-        MSG_CNT = MSG_CNT + 1
-        if string.find(string.lower(str),'error') then
-          n = ui:add(Graphic:new({text = MSG_CNT.." "..str,textColor=colors.red}))
-        else
-          n = ui:add(Graphic:new(MSG_CNT.." "..str))
-        end
-        table.insert(counter,n+1)
-      end
-    end
+  local bar = statusBar:new(Co,6)
+  return function(str)
+    bar:write(str)
   end
-  )
- 
-  --Register scroll listeners to parent.
-  ui_server.listen(Co,"mouse_scroll",co)
-  
-  local send = function(msg)
-    VM.send(co,msg) end
-    local scroll = function(dir)
-      if dir == "up" then
-        VM.send(co,"scroll_up")
-      elseif dir == "down" then
-        VM.send(co,"scoll_down")
-      end
-    end
-  return send
 end
 
 return Server

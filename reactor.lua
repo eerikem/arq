@@ -1,9 +1,13 @@
 local Reactor = {run = true}
 
+local reactorIndex = 0
+
 function Reactor:new()
   local o = {handlers = {}}
   setmetatable(o,self)
   self.__index = self
+  o.id = "reactor"..reactorIndex
+  reactorIndex = reactorIndex + 1
   return o
 end
 
@@ -16,6 +20,7 @@ function Reactor:remove(h)
 end
 
 function Reactor:register(event,h)
+  if not event and h then error("2 args required to register handler",2) end
 --  print("registering "..event)
 --  sleep(1)
   if not self.handlers[event] then
@@ -29,7 +34,7 @@ function Reactor:handleEvent(...)
     local handler = self.handlers[arg[1]]
     return handler(unpack(arg))
   else
-    VM.log("reactor received unhandled event: "..arg[1],2)
+    VM.log(self.id.." received unhandled event: "..arg[1],2)
   end
 end
 

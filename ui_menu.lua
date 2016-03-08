@@ -1,3 +1,5 @@
+local Panel, List = require 'ui_obj'
+
 local menuIndex = 0
 
 local Menu = Panel:new()

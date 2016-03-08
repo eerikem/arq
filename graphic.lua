@@ -1,3 +1,5 @@
+local Reactor = require 'reactor'
+
 local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0}
 
 function Graphic:new(o)
@@ -21,6 +23,37 @@ end
 function Graphic:setOnSelect(ui,handler)
   self.reactor:register("selected",handler)
   ui:register(self,"selectable")
+end
+
+function Graphic:getSize(width)
+  if not width then error("get size requires width for context") end
+  local length = string.len(self.text)
+  local w = self.xpos + length - 1
+  local absWidth = 0
+  local absHeight = 0
+  if w > width then
+    absWidth = width
+    absHeight = math.ceil(length/width) + self.ypos - 1
+  else
+    absWidth = w
+    absHeight = self.ypos
+  end
+  return absWidth, absHeight
+end
+
+function Graphic:getTextFromLine(line,width)
+  if not line or not width or line < 1 then error("badargs",2) end
+  local yIndent = self.ypos - 1
+  local xIndent = self.xpos - 1
+  local line = line - yIndent
+  local length = string.len(self.text)
+  width = width - xIndent
+  if width * (line - 1) < length then
+    local _,result = UI.lineWrap(self.text,width*(line - 1) + 1)
+    return result
+  else
+    return nil
+  end
 end
 
 --function Graphic:positionCursor()

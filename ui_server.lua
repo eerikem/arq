@@ -1,25 +1,43 @@
 
 --
 --VM = require 'vm'
---gen_server = require 'gen_server'
+local gen_server = require 'gen_server'
 --UI = require 'ui'
 
 local Prod = require 'producer'
 local Server = {}
 
-function Server.start_link(...)
-  return gen_server.start_link(Server,arg,{})
+function Server.start_link(term,termName)
+  return gen_server.start_link(Server,{term,termName},{})
+end
+
+local function getTerm(State,x,y)
+  for i=#State.stack,1,-1 do
+    local UI = State.stack[i]
+    local w,h = UI.term.getSize()
+    local X,Y = UI.term.getPosition()
+    if X <= x and x < X + w and Y <= y and y < Y + h then
+      return UI
+    end
+  end
+  return nil
 end
 
 local function handleMouse(Req,State)
   local event,button,x,y = unpack(Req)
   if event == "mouse_scroll" then
-    if button == -1 then
-      State.focus.reactor:handleEvent("scroll","scroll_up",x,y)
-    elseif button == 1 then
-      State.focus.reactor:handleEvent("scroll","scroll_down",x,y)
+    local ui = getTerm(State,x,y)
+    --TODO deal with stack depth and overlap
+    if ui then
+      if button == -1 then
+        ui.reactor:handleEvent("scroll","scroll_up",x,y)
+      elseif button == 1 then
+        ui.reactor:handleEvent("scroll","scroll_down",x,y)
+      else
+        error("Bad mouse_scroll received")
+      end
     else
-      error("Bad mouse_scroll received")
+      VM.log("No ui for mouse scroll at "..x.." "..y)
     end
   elseif event == "mouse_click" then
     State.focus.reactor:handleEvent("mouse_click",button,x,y)

@@ -1,6 +1,8 @@
+local Reactor = require 'reactor'
+
 local panelIndex = 0
 local protoIndex = 0
-local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0}
+local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0,noscroll = false}
 
 local proto = {id="proto"}
 
@@ -139,6 +141,26 @@ function proto:write(ui,noscroll)
   return counter
 end
 
+function proto:drawFromLine(ui,n,noscroll,focus)
+  local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
+  local back = ui.term.getBackgroundColor()
+  if focus then
+    self:colorFocus(ui.term)
+  else
+    self:color(ui.term)
+  end
+  local x = ui.term.getCursorPos()
+  local w = ui.term.getSize()
+  local tmp = self.text
+  self.text = self:getTextFromLine(n,w-x+1)
+  local counter = self:write(ui,noscroll)
+  self.text = tmp
+  self.height = counter + 1
+  ui.term.setTextColor(color)
+  ui.term.setBackgroundColor(back)
+  return counter
+end
+
 function proto:redraw(ui,noscroll,focus)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
@@ -181,6 +203,20 @@ function Panel:applyColors(ui)
     ui.term.setTextColor(self.proto.textColor) end
 end
 
+function Panel:getSize(width)
+  local absWidth = 0
+  local absHeight = 0
+  local maxWidth = 0
+  local xIndent = self.xpos - 1
+  local yIndent = self.ypos - 1
+  for _,V in ipairs(self.index) do
+    local w,h = V:getSize(width-xIndent)
+    if w > maxWidth then maxWidth = w end
+    absHeight = absHeight + h
+  end
+  return maxWidth + xIndent, absHeight + yIndent
+end
+
 function Panel:drawSubset(ui,start,num)
   if start < 1 or start + num -1 > #self.index then
     error("bad indexes for subset",2) end
@@ -199,6 +235,52 @@ function Panel:drawSubset(ui,start,num)
   return c
 end
 
+function Panel:drawFromLine(ui,n)
+  self:applyColors(ui)
+  local x,y = self:setCursor(ui)
+  if self.width then
+    local X,Y = ui.term.getCursorPos()
+    local w = self.width
+    if w == "max" then
+      w = ui.term.getSize() end
+--    print("Panel height: "..self.height) sleep(2)
+    for n=1, self.height - (Y - 1) do
+      for m=1, w do
+        ui.term.write(" ")
+      end
+      incCursorPos(ui.term,x)
+    end
+    ui.term.setCursorPos(X,Y)
+--    print("finished wiping panel")sleep(2)
+  end
+  --TODO generic panel setup for write.
+  
+  local _,height = ui.term.getSize()
+  local first = true
+  local limit = height - (y - 1)
+  local sum = 0
+  local i = 1
+--  print(table.concat({height,limit,sum,i}," "))sleep(1)
+  while ui.pane.index[i] and sum < limit do
+    sum = sum + ui.pane.index[i].height
+--    write("y: "..y.." sum: "..sum.." limit: "..limit)sleep(2)
+    if sum >= n then
+      if first then first = false
+      else incCursorPos(ui.term,x) end
+--      sum = sum + 1 end
+      if sum - ui.pane.index[i].height + 1 >= n then
+        sum = sum + ui.pane.index[i]:redraw(ui,true)
+      else
+        sum = sum + ui.pane.index[i]:drawFromLine(ui,n-(sum-ui.pane.index[i].height),true)
+      end
+    else
+     limit = limit + ui.pane.index[i].height
+    end
+    i = i + 1
+  end
+end
+
+
 Panel.setCursor = proto.setCursor
 
 function Panel:redraw(ui,noscroll)
@@ -212,7 +294,7 @@ function Panel:redraw(ui,noscroll)
     if w == "max" then
       w = ui.term.getSize() end
 --    print("Panel height: "..self.height) sleep(2)
-    for n=1, self.height do
+    for n=1, self.height - (Y - 1) do
       for m=1, w do
         ui.term.write(" ")
       end
@@ -237,6 +319,7 @@ function Panel:redraw(ui,noscroll)
   return lineCounter
 end
 
+
 function Panel:setContent(...)
   self.content = {}--TODO remove metatable?
   for _,V in ipairs(arg) do
@@ -258,6 +341,8 @@ function Panel:applyProto(c)
       c.redraw = c.proto.redraw end
     if not c.drawFocus then
       c.drawFocus = c.proto.drawFocus end
+    if not c.drawFromLine then
+      c.drawFromLine = c.proto.drawFromLine end
     c.color = c.proto.color
     c.colorFocus = c.proto.colorFocus
     c.setCursor = c.proto.setCursor

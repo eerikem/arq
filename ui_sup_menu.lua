@@ -16,25 +16,14 @@ function Client:new(Co)
   local m = Menu.fromList(l)
   m.proto.backgroundFocus = colors.gray
   m.proto.textFocus = colors.white
---  m:setTextColor(colors.lightGray)
---  m:setBackgroundColor(colors.gray)
---  ui.term.setCursorBlink(true)
---  print("adding menu")sleep(2)
   body:add(m)
   body:setBackgroundColor(colors.gray)
   body:setTextColor(colors.lightGray)
   ui:add(t)
---  print("adding body")sleep(2)
   ui:add(body)
---  print("added body")sleep(1)
---  print("menu height: "..m.height)sleep(2)
---  print("height: "..body.height)sleep(2)
   m:link(ui)
   ui:align("center")
   ui:update()
-  local x,y = ui.term.getPosition()
-  VM.log(x.." "..y)
---  print("height: "..body.height)sleep(2)
 end
 
 return Client

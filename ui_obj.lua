@@ -14,16 +14,14 @@ function Panel:new()
   o.id="panel"..panelIndex
   panelIndex = panelIndex + 1
   o.proto = proto:new()
-  o:registerPanelHandlers()
+--  o:registerPanelHandlers()
   return o
 end
 
 function Panel:registerPanelHandlers()
   local handler = function(_,button,x,y)
     local pos = (self.ypos - 1)
-    print("Pane handler here..")sleep(1)
     for _,o in ipairs(self.index) do
---      print("height: "..o.height)
       pos = pos + o.ypos - 1
       local last = pos
       pos = pos + o.height
@@ -35,6 +33,8 @@ function Panel:registerPanelHandlers()
   end
   self.reactor:register("selected",handler)
 end
+
+Panel.onMe = Graphic.onMe
 
 function proto:new(o)
   local o = o or {}
@@ -134,7 +134,7 @@ function proto:write(ui,noscroll)
   
   local x2,y2 = ui.term.getCursorPos()
   if y2-self.absY == 0 then
-    self.width = x2-self.absX + 1
+    self.width = x2-self.absX
   else self.width = ui.term.getSize()
   end
   
@@ -244,7 +244,7 @@ function Panel:drawFromLine(ui,n)
     if w == "max" then
       w = ui.term.getSize() end
 --    print("Panel height: "..self.height) sleep(2)
-    for n=1, self.height - (Y - 1) do
+    for n=1, self.height do
       for m=1, w do
         ui.term.write(" ")
       end
@@ -293,15 +293,16 @@ function Panel:redraw(ui,noscroll)
     local w = self.width
     if w == "max" then
       w = ui.term.getSize() end
---    print("Panel height: "..self.height) sleep(2)
-    for n=1, self.height - (Y - 1) do
+--    VM.log("Panel redraw max height: "..self.height)
+    local first = true
+    for n=1, self.height do
+      if first then first = false
+      else incCursorPos(ui.term,x) end
       for m=1, w do
         ui.term.write(" ")
       end
-      incCursorPos(ui.term,x)
     end
     ui.term.setCursorPos(X,Y)
---    print("finished wiping panel")sleep(2)
   end
   
   local first = true
@@ -311,7 +312,6 @@ function Panel:redraw(ui,noscroll)
     else incCursorPos(ui.term,x)
     lineCounter = lineCounter + 1 end
     lineCounter = lineCounter + V:redraw(ui,noscroll)
---    write("Panel Draw finished item")
   end
   self.height = lineCounter + self.ypos
   ui.term.setTextColor(color)

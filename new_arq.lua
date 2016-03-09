@@ -21,6 +21,7 @@ EVE = require "eventListener"
 Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
+--Attack = require "attack"
 
 VM.init()
 
@@ -31,23 +32,45 @@ local Ui = ui_sup.start_link(Li)
 local write = ui_sup.statusWindow("terminal")
 VM.log = write
 ui_sup.app("terminal")
-local write2 = ui_sup.statusWindow("monitor_4")
-write2("I am here")
-write2("I am here")
-write2("I am here")
---write("hello1")
---write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
---write("error: this is an error error error error error error error error error error error2")
---write("hello2")
---write("hello3")
---write("hello4")
---write("another...rea;u;u asdgmajs dg asd gjkla;sdjkg;jalskdg askdjlg; asdj gsdj kgl;a sjklasdgj ;askdj g;alskdj gl;asjdkg ")
---write("error: this is an error error error error error error error error error error error2")
 
---scroll("up")
---scroll("up")
---scroll("up")
---write("hello5")
+function attackUI()
+  local ui = ui_server.newWindow("monitor_4",18,5)
+  ui:setBackground(colors.lightGray)
+  ui:setText(colors.gray)
+  local title = Graphic:new("Attack Control")
+  title.align= "center"
+  
+  local toggleButton = Graphic:new("Disable Lock")
+  local attackButton = Graphic:new("Launch Attack")
+  local hiddenStatus = Graphic:new("         ")
+  hiddenStatus.xpos = 2
+  
+  local menu = Menu:new()
+  menu.width = "max"
+  menu.xpos = 2
+  menu.ypos = 2
+  menu:add(toggleButton)
+  menu:add(attackButton)
+  menu.proto.backgroundFocus = colors.gray
+  menu.proto.textFocus = colors.white
+  
+  local body = Panel:new()
+  body.width = "max"
+  body:setBackgroundColor(colors.gray)
+  body:setTextColor(colors.lightGray)
+  
+  body:add(menu)
+  body:add(hiddenStatus)
+  
+  ui:add(title)
+  ui:add(body)
+  
+  ui:align("center")
+  ui:update()
+  
+  menu:link(ui)
+end
+attackUI()
 
 while true do
   --VM.flush()

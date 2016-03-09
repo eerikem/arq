@@ -6,14 +6,17 @@
 VM = require 'vm'
 
 local w,h = term.getSize()
-local console = window.create(term.current(),1,1,w,h)
+local console = window.create(term.current(),1,1,w/3,h)
 console.clear()
 console.setCursorPos(1,1)
 console.setCursorBlink(true)
 function writeConsole(str)
-  console.write(str)
-  incCursorPos(console,1)
+  local old = term.redirect(console)
+  print(str)
+  term.redirect(old)
 end
+
+VM.log = writeConsole
 
 gen_server = require 'gen_server'
 luaunit = require 'luaunit'
@@ -183,9 +186,9 @@ end
 --  sleep(1)
 --  ui.pane:drawFromLine(ui,3)
 --end
-
-
-function test_status()
+--
+--
+--function test_status()
 --  local ui = UI:new(term)
 --  ui:add(Graphic:new("Text starts here"))
 --  ui:add(Graphic:new("Some more text here"))
@@ -195,32 +198,32 @@ function test_status()
 --  sleep(1)
 --  ui.pane:drawFromLine(ui,3)
 --  sleep(1)
-  
-  local statusBar = require 'statusBar'
-  local status = statusBar:new("terminal",4)
-  status:write("First")
-  luaunit.assertStrContains(status.ui.pane.index[1].text,"First")
-  status:write("Message")writeConsole("hello: "..table.concat({status.ui.pane:getSize(10)}," ").." ")
-  luaunit.assertStrContains(status.ui.pane.index[2].text,"Message")
-  status:write("Message")--write(status.ui.pane.height)
-  status:write("Message")--write(status.ui.pane.height)
-  status:write("Message")
-  status:write("Message")
-  status:write("Last")
-  sleep(1)
-  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
-  sleep(1)
-  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
-  sleep(1)
-  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
-  sleep(1)
-  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
-  sleep(1)
-  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
-  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
-  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
-  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
-end
+--  
+--  local statusBar = require 'statusBar'
+--  local status = statusBar:new("terminal",4)
+--  status:write("First")
+--  luaunit.assertStrContains(status.ui.pane.index[1].text,"First")
+--  status:write("Message")writeConsole("hello: "..table.concat({status.ui.pane:getSize(10)}," ").." ")
+--  luaunit.assertStrContains(status.ui.pane.index[2].text,"Message")
+--  status:write("Message")--write(status.ui.pane.height)
+--  status:write("Message")--write(status.ui.pane.height)
+--  status:write("Message")
+--  status:write("Message")
+--  status:write("Last")
+--  sleep(1)
+--  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
+--  sleep(1)
+--  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
+--  sleep(1)
+--  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
+--  sleep(1)
+--  gen_server.cast("terminal",{"mouse_scroll",-1,2,17})
+--  sleep(1)
+--  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+--  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+--  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+--  gen_server.cast("terminal",{"mouse_scroll",1,2,17})
+--end
 --
 --function test_menu()
 --  local m = Menu.fromArray({"Item1","Item3","Item2"})
@@ -235,10 +238,10 @@ end
 --  local m2 = Menu.fromArray({"Sub1","Sub2"})
 --  Menu.inlineOnFocus(item4,m2)
 --  m:add(item4)
---  m.selected = 4
+--  m.focus = 4
 --  ui:update()
 --  sleep(1)
---  m.selected = 3
+--  m.focus = 3
 --  ui:update()
 --  m:link(ui)
 --  local x,y = ui.term.getPosition()
@@ -249,8 +252,11 @@ end
 --  ui.reactor:handleEvent("scroll","scroll_up",x,y)
 --  sleep(1)
 --  print(m.index[3].absY)sleep(1)
---  m.index[3].reactor:register("selected",function() print(m.index[3].text.." selected") sleep(1) end)
---  ui.reactor:handleEvent("mouse_click",1,x,5)
+--  m.index[3].reactor:register("selected",function() VM.log(m.index[3].text.." selected") end)
+--  x = x + m.xpos - 1
+--  ui.reactor:handleEvent("mouse_up",101,1,x,5)
+--  ui.reactor:handleEvent("mouse_click",123,1,x,5)
+--  ui.reactor:handleEvent("mouse_up",123,1,x,5)
 --  sleep(1)
 --end
 --
@@ -294,6 +300,63 @@ end
 --  q:setTextColor(colors.red)
 --  ui:update()
 --end
+--
+function test_menu_interactions()
+  local ui = ui_server.newWindow("terminal",7,5)
+  ui:setBackground(colors.gray)
+  ui:setText(colors.lightGray)
+  ui:align("center")
+  
+  local item1 = Graphic:new("Item1")
+  local item2 = Graphic:new("Item2")
+  local item3 = Graphic:new("Item3")
+  
+  local lastSelected = "none"
+  local function selectedHandler(item)
+    return "selected", function(event)
+      lastSelected = item.text
+    end
+  end
+  
+  item1.reactor:register(selectedHandler(item1))
+  item2.reactor:register(selectedHandler(item2))
+  item3.reactor:register(selectedHandler(item3))
+  
+  local menu = Menu:new()
+  menu:add(item1)
+  menu:add(item2)
+  menu:add(item3)
+  
+  menu.xpos = 2
+  menu.ypos = 2
+  
+  ui:add(menu)
+  ui:update()
+  
+  menu:link(ui)
+  
+  local x,y = ui.term.getPosition()
+  x = x + menu.absX
+  y = y + menu.absY
+  
+  term.setTextColor(colors.white)
+  term.setCursorPos(x,y)
+  term.setCursorBlink(true)
+  sleep(2)
+  
+  gen_server.cast("terminal",{"mouse_scroll",1,x,y})
+  luaunit.assertEquals(menu.focus,2)
+  gen_server.cast("terminal",{"mouse_click",1,1,x,y+2})
+  sleep(3)
+  luaunit.assertEquals(menu.focus,3)
+  luaunit.assertEquals(lastSelected,"none")
+  gen_server.cast("terminal",{"mouse_click",2,1,x,y})
+  gen_server.cast("terminal",{"mouse_up",2,1,x,y})
+  luaunit.assertEquals(menu.focus,1)
+  luaunit.assertEquals(lastSelected,"Item1")
+  
+  gen_server.cast("terminal",{"key",keys.enter})
+end
 
 function tearDown_each()
   ui = nil

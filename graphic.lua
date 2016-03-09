@@ -56,6 +56,20 @@ function Graphic:getTextFromLine(line,width)
   end
 end
 
+function Graphic:onMe(x,y)
+  local indentX = self.xpos - 1
+  local indentY = self.ypos - 1
+--  VM.log("Checking absY: "..self.absY.." and height: "..self.height)
+  if self.absY+ indentY <= y and y < self.absY + indentY + self.height then
+--    VM.log("X: "..x.." absX: "..self.absX.." width: "..self.width)
+    if x >= self.absX + indentX and x < self.absX + indentX + self.width then
+      return true
+    end
+  end
+--  VM.log(x.." "..y.." not on Me")
+  return false
+end
+
 --function Graphic:positionCursor()
 --  term.setCursorPos(self.x,self.y)
 --end

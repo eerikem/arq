@@ -111,6 +111,7 @@ function UI:update()
   self.term.clear()
   self.term.setCursorPos(1,1)
   self:draw(self.pane)
+  self:redraw()
   --term.setBackgroundColor(back)
 end
 
@@ -125,7 +126,8 @@ function UI:align(...)
   end
   if v["center"] then
     x = math.floor((px - w + 1) / 2)
-    y = math.floor((py - h + 1) / 2) end
+    y = math.floor((py - h + 1) / 2)
+  end
   if v["bottom"] then
     y = py-h + 1 end
   if v["top"] then
@@ -134,6 +136,8 @@ function UI:align(...)
     x = px-w + 1 end
   if v["left"] then
     x = 1 end
+  if x < 1 then x = 1 end
+  if y < 1 then y = 1 end
   self.term.reposition(x,y)
 end
 
@@ -240,46 +244,74 @@ function UI.lineWrap(sText,w,line,room)
   return line
 end
 
+function UI:onMe(x,y)
+  local xpos,ypos = self.term.getPosition()
+  local w,h = self.term.getSize()
+  if x >= xpos and x < xpos + w then
+    if y >= ypos and y < ypos + h then
+      return true
+    end
+  end
+  return false
+end
+
 function UI:register(obj,event)
   if event == "clickable" then
     self.selectables[obj]=true
-    
   elseif event == "scroll" then
     local handler = function (event,direction,x,y)
-      local xpos,ypos = self.term.getPosition()
-      local w,h = self.term.getSize()
-      if x >= xpos and x < xpos + w then
-        if y >= ypos and y < ypos + h then
-          obj.reactor:handleEvent("scroll",direction)        
-        end
+      if self:onMe(x,y) then
+        obj.reactor:handleEvent("scroll",direction)
       end
     end
     self.reactor:register(event,handler)
+  elseif event == "keys" then
+    local handler = function (event,code,down)
+      if code == keys.enter
+        or code == keys.left or code == keys.right
+        or code == keys.up or code == keys.down then
+        obj.reactor:handleEvent(event,code)
+      end
+    end
+    self.reactor:register("key",handler)
   end
 end
- 
+
+function UI:relativeXY(x,y)
+  local xpos,ypos = self.term.getPosition()
+  y = y - ypos + 1
+  x = x - xpos + 1
+  return x,y
+end
 
 function UI:registerUIListeners()
-  local function clickHandler(_,button,x,y)
-    local xpos,ypos = self.term.getPosition()
-    y = y - ypos + 1
-    x = x - xpos + 1
-    VM.log("Got "..table.concat({button,x,y}," "))sleep(1)
+  local clickDown
+  local function clickHandler(event,id,button,x,y)
+    if event == "mouse_click" then clickDown = id end
+    if event == "mouse_up" and id ~= clickDown then
+      return VM.log("Mouse up "..id.." from unrelated mouse down.")  
+    end
+    x,y = self:relativeXY(x,y)
+--    VM.log("UI "..self.pane.id.." reactor got "..table.concat({id,button,x,y}," "))
     for obj,_ in pairs(self.selectables) do
-    --TODO make this generic operation
-      VM.log("Checking "..obj.absY.." and "..obj.height)
-      if obj.absY <= y and y < obj.absY + obj.height then
-        VM.log("X: "..x.." absX: "..obj.absX.." width: "..obj.width)
-        if x >= obj.absX and x < obj.absX + obj.width then
-          VM.log("sending selected to an obj")
-          obj.reactor:handleEvent("selected",button,x,y)
-        end
+      if obj:onMe(x,y) then
+        obj.reactor:handleEvent(event,button,x,y)
       end
-    end 
+    end
   end
   
+  local function touchHandler(event,x,y)
+    x,y = self:relativeXY(x,y)
+    for obj,_ in pairs(self.selectables) do
+      if obj:onMe(x,y) then
+        obj.reactor:handleEvent(event,x,y)
+      end
+    end
+  end
   
   self.reactor:register("mouse_click",clickHandler)
+  self.reactor:register("mouse_up",clickHandler)
+  self.reactor:register("monitor_touch",touchHandler)
 end
 
 return UI

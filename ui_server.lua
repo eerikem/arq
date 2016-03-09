@@ -14,9 +14,8 @@ end
 local function getTerm(State,x,y)
   for i=#State.stack,1,-1 do
     local UI = State.stack[i]
-    local w,h = UI.term.getSize()
-    local X,Y = UI.term.getPosition()
-    if X <= x and x < X + w and Y <= y and y < Y + h then
+--    VM.log("Checking "..UI.pane.id)
+    if UI:onMe(x,y) then
       return UI
     end
   end
@@ -24,8 +23,9 @@ local function getTerm(State,x,y)
 end
 
 local function handleMouse(Req,State)
-  local event,button,x,y = unpack(Req)
+  local event = unpack(Req)
   if event == "mouse_scroll" then
+    local _,button,x,y = unpack(Req)
     local ui = getTerm(State,x,y)
     --TODO deal with stack depth and overlap
     if ui then
@@ -39,8 +39,12 @@ local function handleMouse(Req,State)
     else
       VM.log("No ui for mouse scroll at "..x.." "..y)
     end
-  elseif event == "mouse_click" then
-    State.focus.reactor:handleEvent("mouse_click",button,x,y)
+  elseif event == "mouse_click" or "mouse_up" then
+    local event,id,button,x,y = unpack(Req)
+    local ui = getTerm(State,x,y)
+    --TODO change of focus event?
+    if ui then ui.reactor:handleEvent(unpack(Req))
+    else VM.log("No ui for "..event.." at "..x.." "..y) end
   else
     VM.log("UI_Server Received: "..event.." at "..x.." "..y)
   end
@@ -50,6 +54,9 @@ end
 local function handleTouch(Req,State)
   local _,x,y = unpack(Req)
   VM.log(State.ui.name.." touched at "..x.." "..y)
+  local ui = getTerm(State,x,y)
+  if ui then ui.reactor:handleEvent(unpack(Req))
+  else VM.log("No ui for "..event.." at "..x.." "..y) end
   return State 
 end
 
@@ -61,23 +68,23 @@ end
 local UI_Events = {
   char = function(Req,State)
     local _,char = unpack(Req)
-    VM.log("Received: "..char)
+    VM.log("UI_Server Received: "..char)
     return State end,
   key = function(Req,State)
     local _,keycode,helddown = unpack(Req)
     local msg = keys.getName( keycode )
-    if helddown then msg = msg.." down" end
-    VM.log(msg)
+    if helddown then msg = msg.." down at UI_Server" end
+    State.focus.reactor:handleEvent(unpack(Req))
     return State 
     end,
   key_up = function(Req,State)
     local _,keycode = unpack(Req)
-    VM.log(keys.getName( keycode ).." up")
+    VM.log(keys.getName( keycode ).." up at UI_Server")
     return State 
     end,
   paste = function(Req,State)
     local _,string = unpack(Req)
-    VM.log("Pasted: "..string)
+    VM.log("Pasted to UI_Server: "..string)
     return State
     end,
   mouse_click = handleMouse,
@@ -92,15 +99,17 @@ local UI_Events = {
 local function initNativeUI(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
+  win.setVisible(false)
   win.setCursorBlink(true)
   local ui = UI:new(win)
   ui.name = name
-  ui:setBackground(colors.gray)
+  ui:setBackground(colors.black)
   ui:setText(colors.lightGray)
   local label = Graphic:new(ui.name)
   label.align = "center"
 --  label.ypos = h/2
   ui:add(label)
+  ui.redraw = ui.term.redraw
   ui:update()
   return ui
 end
@@ -114,9 +123,8 @@ function Server.init(term,name)
   end
 
   local ui = initNativeUI(term,name)
-  -- The term.redraw functions indexed by ui
   local windows = {}
-  windows[ui] = ui.term.redraw
+  windows[ui] = true 
   
   return {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new(),reactor = reactor}
 end
@@ -127,9 +135,10 @@ local function newWindow(State,Co,w,h)
   if w == "max" then w = maxW end
   if h == "max" then h = maxH end
   local ui = UI:new(window.create(State.native,1,1,w,h))
+  ui.term.setVisible(false)
   ui.native = State.native
-  State.windows[ui] = ui.term.redraw --TODO window management?
-  ui.term.redraw = function(self)
+  State.windows[ui] = true --TODO window management?
+  ui.redraw = function(self)
     gen_server.cast(Co,{"update",self})
   end
   table.insert(State.stack,ui)
@@ -142,7 +151,8 @@ local i = 0
 local function redrawStack(State,ui)
   i = i + 1
   for _,UI in ipairs(State.stack) do
-    State.windows[UI]()
+    UI.term.setVisible(true)
+    UI.term.setVisible(false)
 --    VM.log("Here "..i.." "..UI.pane.id)
   end
 --  if i == 2 then error("reached iteration "..i) end

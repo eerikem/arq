@@ -20,12 +20,11 @@ end
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {pane = Panel:new(),term = term,reactor = Reactor:new(),selectables={}}
+  local o = {pane = Panel:new(),term = term,reactor = Reactor:new(),selectables={},redraw = term.redraw}
   setmetatable(o,self)
   self.__index = self
   
   o:registerUIListeners()
-  
   return o
 end
 
@@ -111,6 +110,7 @@ function UI:update()
   self.term.clear()
   self.term.setCursorPos(1,1)
   self:draw(self.pane)
+  if not self.redraw then error("no redraw",2)end
   self:redraw()
   --term.setBackgroundColor(back)
 end
@@ -274,6 +274,8 @@ function UI:register(obj,event)
       end
     end
     self.reactor:register("key",handler)
+  else
+    error(event.." not a recognised ui interaction")
   end
 end
 

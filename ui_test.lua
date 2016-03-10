@@ -70,39 +70,42 @@ end
 --  ui2:update()
 --end
 --
---function test_list()
---  local l = List.fromArray({"Item1","Item2","Item3"})
---  l.align = "center" --todo Panel alignment
---  l:setTextColor(colors.orange)
---  ui:add(TITLE)
---  ui:add(l)
---  ui:update()
-----  sleep(1)
---  l:add(TITLE)
---  ui:update()
+function test_list()
+  local l = List.fromArray({"Item1","Item2","Item3"})
+  l.align = "center" --todo Panel alignment
+  l:setTextColor(colors.orange)
+  ui:add(TITLE)
+  ui:add(l)
+  ui:update()
 --  sleep(1)
---end
---
---function test_mouse_listener()
---  local pressed = false
---  local handler = function(e) pressed = true end
---  local handler2 = function(e) pressed = false end
---  local g = Graphic:new("A really long button is here that should wrap around button")
---  luaunit.assertEquals(g.height,1)
---  ui:add(g)
---  local h = Graphic:new("Button2")
---  ui:add(h)
---  luaunit.assertEquals(g.height,3)
---  g:setOnSelect(ui,handler)
---  h:setOnSelect(ui,handler2)
---  local x = ui.term.getPosition()
---  ui.reactor:handleEvent("mouse_touch",x,5)
---  luaunit.assertFalse(pressed)
---  ui.reactor:handleEvent("mouse_touch",x,1)
---  luaunit.assertTrue(pressed)
---  ui.reactor:handleEvent("mouse_touch",x,4)
---  luaunit.assertFalse(pressed)
---end
+  l:add(TITLE)
+  ui:update()
+  sleep(1)
+end
+
+function test_mouse_listener()
+  local pressed = false
+  local handler = function(e) pressed = true end
+  local handler2 = function(e) pressed = false end
+  local g = Graphic:new("A really long button is here that should wrap around button")
+  luaunit.assertEquals(g.height,1)
+  ui:add(g)
+  local h = Graphic:new("Button2")
+  ui:add(h)
+  luaunit.assertEquals(g.height,3)
+  g:setOnSelect(ui,handler)
+  h:setOnSelect(ui,handler2)
+  local x = ui.term.getPosition()
+  ui.reactor:handleEvent("mouse_click",1,1,x,5)
+  ui.reactor:handleEvent("mouse_up",1,1,x,5)
+  luaunit.assertFalse(pressed)
+  ui.reactor:handleEvent("mouse_click",2,1,x,1)
+  ui.reactor:handleEvent("mouse_up",2,1,x,1)
+  luaunit.assertTrue(pressed)
+  ui.reactor:handleEvent("mouse_click",3,1,x,4)
+  ui.reactor:handleEvent("mouse_up",3,1,x,4)
+  luaunit.assertFalse(pressed)
+end
 --
 --function test_button_list()
 --  local button1 = false
@@ -116,21 +119,26 @@ end
 --  l:add(a)
 --  l:add(b)
 --  b.ypos = 3
---  l:add(a)
+----  l:add(a)
 --  a:setOnSelect(ui,handler1)
 --  b:setOnSelect(ui,handler2)
+--  luaunit.assertTrue(ui.selectables[a] and ui.selectables[b])
 --  ui:add(l)
 --  ui:update()
 --  local x = ui.term.getPosition()
---  ui.reactor:handleEvent("mouse_touch",x,2)
-----  sleep(4)
+--  ui.reactor:handleEvent("mouse_click",1,1,x,2)
+--  ui.reactor:handleEvent("mouse_up",1,1,x,2)
+--  sleep(1)
 --  luaunit.assertTrue(button1)
---  ui.reactor:handleEvent("mouse_touch",x,5)
-----  sleep(4)
+--  ui.reactor:handleEvent("mouse_click",2,1,x,5)
+--  ui.reactor:handleEvent("mouse_up",2,1,x,5)
+--  sleep(1)
 --  luaunit.assertTrue(button2)
---  ui.reactor:handleEvent("mouse_touch",x,6)
+--  --TODO add supports duplicate objects..?
+----  ui.reactor:handleEvent("mouse_click",3,1,x,6)
+----  ui.reactor:handleEvent("mouse_up",3,1,x,6)
 ----  sleep(4)
---  luaunit.assertFalse(button1)
+----  luaunit.assertFalse(button1)
 --end
 --
 --function test_getSize()
@@ -189,7 +197,7 @@ end
 --
 --
 --function test_status()
---  local ui = UI:new(term)
+--  local ui = UI:new(window.create(term.current(),1,1,term.getSize()))
 --  ui:add(Graphic:new("Text starts here"))
 --  ui:add(Graphic:new("Some more text here"))
 --  ui:add(Graphic:new("Text ends on this line"))
@@ -301,62 +309,62 @@ end
 --  ui:update()
 --end
 --
-function test_menu_interactions()
-  local ui = ui_server.newWindow("terminal",7,5)
-  ui:setBackground(colors.gray)
-  ui:setText(colors.lightGray)
-  ui:align("center")
-  
-  local item1 = Graphic:new("Item1")
-  local item2 = Graphic:new("Item2")
-  local item3 = Graphic:new("Item3")
-  
-  local lastSelected = "none"
-  local function selectedHandler(item)
-    return "selected", function(event)
-      lastSelected = item.text
-    end
-  end
-  
-  item1.reactor:register(selectedHandler(item1))
-  item2.reactor:register(selectedHandler(item2))
-  item3.reactor:register(selectedHandler(item3))
-  
-  local menu = Menu:new()
-  menu:add(item1)
-  menu:add(item2)
-  menu:add(item3)
-  
-  menu.xpos = 2
-  menu.ypos = 2
-  
-  ui:add(menu)
-  ui:update()
-  
-  menu:link(ui)
-  
-  local x,y = ui.term.getPosition()
-  x = x + menu.absX
-  y = y + menu.absY
-  
-  term.setTextColor(colors.white)
-  term.setCursorPos(x,y)
-  term.setCursorBlink(true)
-  sleep(2)
-  
-  gen_server.cast("terminal",{"mouse_scroll",1,x,y})
-  luaunit.assertEquals(menu.focus,2)
-  gen_server.cast("terminal",{"mouse_click",1,1,x,y+2})
-  sleep(3)
-  luaunit.assertEquals(menu.focus,3)
-  luaunit.assertEquals(lastSelected,"none")
-  gen_server.cast("terminal",{"mouse_click",2,1,x,y})
-  gen_server.cast("terminal",{"mouse_up",2,1,x,y})
-  luaunit.assertEquals(menu.focus,1)
-  luaunit.assertEquals(lastSelected,"Item1")
-  
-  gen_server.cast("terminal",{"key",keys.enter})
-end
+--function test_menu_interactions()
+--  local ui = ui_server.newWindow("terminal",7,5)
+--  ui:setBackground(colors.gray)
+--  ui:setText(colors.lightGray)
+--  ui:align("center")
+--  
+--  local item1 = Graphic:new("Item1")
+--  local item2 = Graphic:new("Item2")
+--  local item3 = Graphic:new("Item3")
+--  
+--  local lastSelected = "none"
+--  local function selectedHandler(item)
+--    return "selected", function(event)
+--      lastSelected = item.text
+--    end
+--  end
+--  
+--  item1.reactor:register(selectedHandler(item1))
+--  item2.reactor:register(selectedHandler(item2))
+--  item3.reactor:register(selectedHandler(item3))
+--  
+--  local menu = Menu:new()
+--  menu:add(item1)
+--  menu:add(item2)
+--  menu:add(item3)
+--  
+--  menu.xpos = 2
+--  menu.ypos = 2
+--  
+--  ui:add(menu)
+--  ui:update()
+--  
+--  menu:link(ui)
+--  
+--  local x,y = ui.term.getPosition()
+--  x = x + menu.absX
+--  y = y + menu.absY
+--  
+--  term.setTextColor(colors.white)
+--  term.setCursorPos(x,y)
+--  term.setCursorBlink(true)
+--  sleep(1)
+--  
+--  gen_server.cast("terminal",{"mouse_scroll",1,x,y})
+--  luaunit.assertEquals(menu.focus,2)
+--  gen_server.cast("terminal",{"mouse_click",1,1,x,y+2})
+--  sleep(1)
+--  luaunit.assertEquals(menu.focus,3)
+--  luaunit.assertEquals(lastSelected,"none")
+--  gen_server.cast("terminal",{"mouse_click",2,1,x,y})
+--  gen_server.cast("terminal",{"mouse_up",2,1,x,y})
+--  luaunit.assertEquals(menu.focus,1)
+--  luaunit.assertEquals(lastSelected,"Item1")
+--  
+--  gen_server.cast("terminal",{"key",keys.enter})
+--end
 
 function tearDown_each()
   ui = nil

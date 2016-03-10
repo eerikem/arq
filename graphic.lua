@@ -21,8 +21,9 @@ function Graphic:setBackgroundColor(c)
 end
 
 function Graphic:setOnSelect(ui,handler)
-  self.reactor:register("selected",handler)
-  ui:register(self,"selectable")
+  self.reactor:register("mouse_up",handler)
+  self.reactor:register("monitor_touch",handler)
+  ui:register(self,"clickable")
 end
 
 function Graphic:getSize(width)

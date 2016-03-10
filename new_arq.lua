@@ -28,9 +28,11 @@ VM.init()
 
 local Li = EVE.start_link()
 --local Ui = EVE.subscriber(Li,ui_sup)
+
 local Ui = ui_sup.start_link(Li)
 local write = ui_sup.statusWindow("terminal")
 VM.log = write
+
 ui_sup.app("terminal")
 
 function attackUI()
@@ -70,6 +72,7 @@ function attackUI()
   
   menu:link(ui)
 end
+
 attackUI()
 
 while true do

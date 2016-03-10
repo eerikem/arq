@@ -96,11 +96,11 @@ end
 
 local function focusHandler(ui,menu)
   return function(event,button,x,y)
+    if button == 3 then return end
     --TODO monitorTouch seperate handler?
     if event == "monitor_touch" then y = x x = button button = nil end
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
-        VM.log("Changing focus to "..menu.content[obj])
         menu.focus = menu.content[obj]
         ui:update()
         if event == "monitor_touch" then
@@ -113,6 +113,7 @@ end
 
 local function mouseUpHandler(ui,menu)
   return function(_,button,x,y)
+    if button == 3 then return end
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
         VM.log("Sending selected to menu item"..menu.content[obj])
@@ -144,7 +145,7 @@ local function keyHandler(ui,menu)
       menu:inc()
       ui:update()
     elseif key == keys.enter then
-      menu.index[menu.focus].reactor:handleEvent("selected")
+      return menu.index[menu.focus].reactor:handleEvent("selected")
     else
       VM.log("Menu not handling "..keys.getName(key))
     end

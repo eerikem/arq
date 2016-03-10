@@ -99,8 +99,6 @@ local UI_Events = {
 local function initNativeUI(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
-  win.setVisible(false)
-  win.setCursorBlink(true)
   local ui = UI:new(win)
   ui.name = name
   ui:setBackground(colors.black)
@@ -109,8 +107,8 @@ local function initNativeUI(term,name)
   label.align = "center"
 --  label.ypos = h/2
   ui:add(label)
-  ui.redraw = ui.term.redraw
   ui:update()
+  win.setVisible(false)
   return ui
 end
 

@@ -346,7 +346,8 @@ function Panel:applyProto(c)
     c.color = c.proto.color
     c.colorFocus = c.proto.colorFocus
     c.setCursor = c.proto.setCursor
-    c.write = c.proto.write
+    if not c.write then
+      c.write = c.proto.write end
   end
 end
 

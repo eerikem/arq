@@ -8,6 +8,7 @@ colors.minus = function(colors,color)
   end
 end
 
+--Global for backwords compatibility
 BUNDLE = {}
 
 function BUNDLE:new(o)
@@ -83,3 +84,5 @@ end
 function BUNDLE:getName()
   return self.name
 end
+
+return BUNDLE

@@ -60,11 +60,10 @@ local getNames = function(State)
 end
 
 function Server.handle_call(Request,From,State)
-  local From, Ref = unpack(From)
   if Request == "get_ui_names" then
-    VM.send(From,getNames(State))
+    gen_server.reply(From,getNames(State))
   elseif Request == "get_uis" then
-    VM.send(From,State.uis)
+    gen_server.reply(From,State.uis)
   end
   return State
 end

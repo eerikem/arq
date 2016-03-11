@@ -60,8 +60,20 @@ local function handleTouch(Req,State)
   return State 
 end
 
+local i = 0
+local function redrawStack(State,ui)
+  i = i + 1
+  for _,UI in ipairs(State.stack) do
+    UI.term.setVisible(true)
+    UI.term.setVisible(false)
+--    VM.log("Here "..i.." "..UI.pane.id)
+  end
+--  if i == 2 then error("reached iteration "..i) end
+end
+
 local function resized(_,State)
   VM.log(State.ui.name.." resized")
+  redrawStack(State)
   return State
 end
 
@@ -137,29 +149,23 @@ local function newWindow(State,Co,w,h)
   ui.native = State.native
   State.windows[ui] = true --TODO window management?
   ui.redraw = function(self)
-    gen_server.cast(Co,{"update",self})
+    local Msg = gen_server.cast(Co,{"update",self})
+--    if Msg ~= "ok" then error("Problem got: "..Msg) end
   end
   table.insert(State.stack,ui)
   State.focus = ui 
   return ui
 end
 
-local i = 0
-
-local function redrawStack(State,ui)
-  i = i + 1
-  for _,UI in ipairs(State.stack) do
-    UI.term.setVisible(true)
-    UI.term.setVisible(false)
---    VM.log("Here "..i.." "..UI.pane.id)
-  end
---  if i == 2 then error("reached iteration "..i) end
-end
-
 function Server.handle_call(Request,From,State)
-  if Request[1] == "new_window" then
+  local event = Request[1]
+  if event == "new_window" then
     local _,w,h = unpack(Request)
-    VM.send(From[1],newWindow(State,VM.running(),w,h))
+    gen_server.reply(From,newWindow(State,VM.running(),w,h))
+  elseif event == "update" then
+    local ui = Request[2]
+    redrawStack(State,ui)
+    gen_server.reply(From,"ok")
   else
     error("received unkown msg")
   end
@@ -169,15 +175,15 @@ end
 function Server.handle_cast(Request,State)
   if type(Request) == "table" then
     local event = Request[1]
-    if event == "update" then
-      local ui = Request[2]
-      redrawStack(State,ui)
-    elseif event == "register" then
+    if event == "register" then
       local event = Request[2]
       local co = Request [3]
       HashArrayInsert(State.events,event,co)
       VM.log("Subscribed new co to "..event)
       EVE.subscribe("events",event)
+    elseif event == "update" then
+      local ui = Request[2]
+      redrawStack(State,ui)
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --todo generic event subscriber handler

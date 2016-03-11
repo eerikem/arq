@@ -36,7 +36,7 @@ function Server.init()
   for event,handler in pairs(UI_Events) do
     reactor:register(event,handler)
   end
-  local o = {reactor = reactor,clickCounter=0}
+  local o = {reactor = reactor,clickCounter=0,timers={}}
   reactor:register("mouse_click",clickHandler(o))
   reactor:register("mouse_up",clickHandler(o))
   reactor:register("mouse_drag",clickHandler(o))
@@ -44,6 +44,7 @@ function Server.init()
 end
 
 function Server.handle_call(Request,From,State)
+  local event = Request[1]
   return State
 end
 
@@ -51,8 +52,26 @@ function Server.handle_cast(Request,State)
   local event = Request[1]
   if event=="subscribe" then
     HashArrayInsert(State,Request[3],Request[2])
-  elseif UI_Events[event] or "mouse_click" or "mouse_up" or "mouse_drag" then
+  elseif UI_Events[event] or event == "mouse_click"
+    or event == "mouse_up" or event == "mouse_drag" then
     State.reactor:handleEvent(unpack(Request))
+  elseif event == "sleep" then
+    VM.log("Events got sleep")
+    local _,time,From = unpack(Request)
+    local timer = os.startTimer( time )
+    State.timers[timer]=From
+  elseif event == "timer" then
+    VM.log("Events got timer")
+    local timer = Request[2]
+    if State.timers[timer] then
+      VM.log("sending wake")
+      VM.send(State.timers[timer],"wake")
+      State.timers[timer]=nil
+    end
+  elseif State[event] then
+    for _,Co in ipairs(State[event]) do
+      gen_server.cast(Co,Request)
+    end
   else
     VM.log("events received unhandled: "..event)
   end
@@ -60,8 +79,27 @@ function Server.handle_cast(Request,State)
   return State
 end
 
-function Server.subscribe(Co,event)
-  gen_server.cast(Co,{"subscribe",VM.running(),event})
+local function sleep( nTime )
+    local timer = os.startTimer( nTime or 0 )
+    repeat
+        local sEvent, param = os.pullEvent( "timer" )
+    until param == timer
+end
+
+function Server.sleep( time )
+  if not time then return end
+  if VM.running() == "ROOT" then
+    return sleep(time) end
+  gen_server.cast("events",{"sleep",time,VM.running()},"infinite")
+  repeat
+    local event = VM.receive()
+--    VM.log(" received something")
+  until event == "wake" or event == "stop"
+end
+
+function Server.subscribe(event,Co)
+  local Co = Co or VM.running()
+  gen_server.cast("events",{"subscribe",Co,event})
 end
 
 function Server.subscriber(Co,Module)

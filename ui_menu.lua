@@ -96,9 +96,13 @@ end
 
 local function focusHandler(ui,menu)
   return function(event,button,x,y)
-    if button == 3 then return end
+    if event == "monitor_touch" then
+      y = x x = button button = nil 
+      VM.log("Menu got touch")
+    elseif button == 3 then
     --TODO monitorTouch seperate handler?
-    if event == "monitor_touch" then y = x x = button button = nil end
+      return VM.log("Got button 3")
+    end
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
         menu.focus = menu.content[obj]

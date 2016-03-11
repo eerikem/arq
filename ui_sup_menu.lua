@@ -24,6 +24,8 @@ function Client:new(Co)
   m:link(ui)
   ui:align("center")
   ui:update()
+  t.text = "UI List2"
+  ui:update()
 end
 
 return Client

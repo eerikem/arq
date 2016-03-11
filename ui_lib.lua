@@ -111,7 +111,8 @@ function UI:update()
   self.term.setCursorPos(1,1)
   self:draw(self.pane)
   if not self.redraw then error("no redraw",2)end
-  self:redraw()
+  VM.log("updating")
+  return self:redraw()
   --term.setBackgroundColor(back)
 end
 
@@ -306,7 +307,10 @@ function UI:registerUIListeners()
     x,y = self:relativeXY(x,y)
     for obj,_ in pairs(self.selectables) do
       if obj:onMe(x,y) then
+--        VM.log("touch on ui "..obj.id.." "..x.." "..y)
         obj.reactor:handleEvent(event,x,y)
+      else
+--        VM.log("touch not on me")
       end
     end
   end

@@ -21,7 +21,9 @@ EVE = require "eventListener"
 Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
+Group = require "group"
 --Attack = require "attack"
+local Attack = require "attack"
 
 VM.init()
 
@@ -35,45 +37,7 @@ VM.log = write
 
 ui_sup.app("terminal")
 
-function attackUI()
-  local ui = ui_server.newWindow("monitor_4",18,5)
-  ui:setBackground(colors.lightGray)
-  ui:setText(colors.gray)
-  local title = Graphic:new("Attack Control")
-  title.align= "center"
-  
-  local toggleButton = Graphic:new("Disable Lock")
-  local attackButton = Graphic:new("Launch Attack")
-  local hiddenStatus = Graphic:new("         ")
-  hiddenStatus.xpos = 2
-  
-  local menu = Menu:new()
-  menu.width = "max"
-  menu.xpos = 2
-  menu.ypos = 2
-  menu:add(toggleButton)
-  menu:add(attackButton)
-  menu.proto.backgroundFocus = colors.gray
-  menu.proto.textFocus = colors.white
-  
-  local body = Panel:new()
-  body.width = "max"
-  body:setBackgroundColor(colors.gray)
-  body:setTextColor(colors.lightGray)
-  
-  body:add(menu)
-  body:add(hiddenStatus)
-  
-  ui:add(title)
-  ui:add(body)
-  
-  ui:align("center")
-  ui:update()
-  
-  menu:link(ui)
-end
-
-attackUI()
+Attack.start()
 
 while true do
   --VM.flush()

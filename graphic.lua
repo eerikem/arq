@@ -67,7 +67,7 @@ function Graphic:onMe(x,y)
       return true
     end
   end
---  VM.log(x.." "..y.." not on Me")
+--  VM.log(x.." "..y.." not on graphic")
   return false
 end
 

@@ -77,14 +77,16 @@ end
 
 function Server.handle_cast(Request,State)
   local event = Request[1]
-  if State.enabled then
-    State.button:setTextColor(colors.lightGray)
-    State.enabled = false
-  else
-    State.button:setTextColor(colors.green)
-    State.enabled = true
+  if event == "redstone" then
+    if State.enabled then
+      State.button:setTextColor(colors.lightGray)
+      State.enabled = false
+    else
+      State.button:setTextColor(colors.green)
+      State.enabled = true
+    end
+    State.ui:update()
   end
-  State.ui:update()
   return State
 end
 

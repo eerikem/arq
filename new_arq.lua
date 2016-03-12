@@ -24,6 +24,7 @@ Menu = require "ui_menu"
 Group = require "group"
 --Attack = require "attack"
 local Attack = require "attack"
+local Elevator = require "elevator"
 
 VM.init()
 
@@ -38,6 +39,7 @@ VM.log = write
 ui_sup.app("terminal")
 
 Attack.start()
+Elevator.start()
 
 while true do
   --VM.flush()

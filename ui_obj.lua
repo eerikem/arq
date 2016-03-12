@@ -35,6 +35,7 @@ function Panel:registerPanelHandlers()
 end
 
 Panel.onMe = Graphic.onMe
+Panel.setOnSelect= Graphic.setOnSelect
 
 function proto:new(o)
   local o = o or {}
@@ -127,7 +128,7 @@ function proto:write(ui,noscroll)
     end
   end
   if self.align == "center" then
-    counter = ui:printCentered(self.text,y,noscroll)
+    counter = ui:printCentered(self.text,y,0,noscroll)
   else
     counter = ui:write(self.text,noscroll)
   end

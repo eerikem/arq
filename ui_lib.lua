@@ -69,6 +69,7 @@ function UI:remove(o)
 end
 
 function UI:printCentered(str, ypos,n,noscroll)
+  --TODO n is lines last printed, BAD DESIGN! 
   if not n then n = 0 end
   if type(n) == "boolean" then noscroll = n n = 0 end
   --TODO what is n doing here? Use below...
@@ -77,7 +78,7 @@ function UI:printCentered(str, ypos,n,noscroll)
   if w >= string.len(str) then
     return n + self:indentLeft(str,w/2 - #str/2,ypos,noscroll)
   else
-    n = n + self:indentLeft(str,0,ypos,noscroll)
+    n = n + self:indentLeft(string.sub(str,1,w),0,ypos,noscroll)
     return self:printCentered(string.sub(str,w+1),ypos+1,n,noscroll)
   end
 end

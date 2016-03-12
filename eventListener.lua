@@ -68,6 +68,16 @@ function Server.handle_cast(Request,State)
       VM.send(State.timers[timer],"wake")
       State.timers[timer]=nil
     end
+  elseif event == "peripheral_detach" then
+    local side = Request[2]
+    if peripheral.getType(side)=="monitor" then
+      ui_sup.sendOsEvent(event,side)
+    end
+  elseif event == "peripheral" then
+    local side = Request[2]
+    if peripheral.getType(side)=="monitor" then
+      ui_sup.sendOsEvent(event,side)
+    end
   elseif State[event] then
     for _,Co in ipairs(State[event]) do
       gen_server.cast(Co,Request)

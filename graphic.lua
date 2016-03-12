@@ -60,10 +60,14 @@ end
 function Graphic:onMe(x,y)
   local indentX = self.xpos - 1
   local indentY = self.ypos - 1
+  local width = self.width
+  if width == "max" then
+    width = 1000 --TODO better layout management
+  end
 --  VM.log("Checking absY: "..self.absY.." and height: "..self.height)
   if self.absY+ indentY <= y and y < self.absY + indentY + self.height then
 --    VM.log("X: "..x.." absX: "..self.absX.." width: "..self.width)
-    if x >= self.absX + indentX and x < self.absX + indentX + self.width then
+    if x >= self.absX + indentX and x < self.absX + indentX + width then
       return true
     end
   end

@@ -19,8 +19,8 @@ local UI_Events = {
   key = toTerminal,
   key_up = toTerminal,
   paste = toTerminal,
-  peripheral=nil,
-  peripheral_detach=nil,
+--  peripheral=nil,
+--  peripheral_detach=nil,
   mouse_click = toTerminal,
   mouse_up = toTerminal,
   mouse_scroll = toTerminal,
@@ -34,6 +34,13 @@ local function subscribe(Co,event)
   EVE.subscribe(Co,event)
 end
 
+local function linkNewMon(name,uis)
+    if peripheral.getType(name) == "monitor" then
+      uis[name]=link_ui(peripheral.wrap(name),name)
+      VM.register(name,uis[name])
+    end
+end
+
 function Server.init(eventCo)
   local reactor = Reactor:new()
   for event,handler in pairs(UI_Events) do
@@ -44,10 +51,7 @@ function Server.init(eventCo)
 --  subscribe(eventCo,"mouse_click")
 --  subscribe(eventCo,"monitor_touch")
   for n,name in ipairs(peripheral.getNames()) do
-    if peripheral.getType(name) == "monitor" then
-      Uis[name]=link_ui(peripheral.wrap(name),name)
-      VM.register(name,Uis[name])
-    end
+    linkNewMon(name,Uis)
   end
   return {uis = Uis, events = eventCo,reactor = reactor}
 end
@@ -82,10 +86,23 @@ function Server.handle_cast(Request,State)
   local event = Request[1]
   if UI_Events[event] then
     State.reactor:handleEvent(unpack(Request))
-    return State
+  elseif event == "peripheral_detach" then
+    local name = Request[2]
+    VM.log(name.." detached!")
+    if State.uis[name] then
+      gen_server.cast(name,event)
+    end
+  elseif event == "peripheral" then
+    local name = Request[2]
+    if State.uis[name] then
+      gen_server.cast(name,event)
+    else
+      linkNewMon(name,State.uis)
+    end
   else
     return parse(State,unpack(Request))
   end
+  return State
 end
 
 function Server.sendOsEvent(...)

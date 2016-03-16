@@ -11,7 +11,7 @@ local cables = {
 local Elevator = {}
 
 local function elevatorUI(Co,floor)
-  local ui = ui_server.newWindow(Co,7,6)
+  local ui = ui_server.newWindow(Co,7,5)
   
   local floors = Radio:new()
   local lvl1 = Graphic:new("1")
@@ -104,7 +104,7 @@ local function elevatorUI(Co,floor)
   
   dark()
   
-  ui:align("center","left")
+  ui:align("top")
   ui:update()
     
   local function colorHandler()

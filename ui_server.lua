@@ -73,6 +73,10 @@ end
 
 local function resized(_,State)
   VM.log(State.ui.name.." resized")
+  for _,UI in ipairs(State.stack) do
+    if UI.alignment then
+      UI:align(unpack(UI.alignment)) end
+  end
   redrawStack(State)
   return State
 end

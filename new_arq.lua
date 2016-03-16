@@ -25,6 +25,7 @@ Group = require "group"
 --Attack = require "attack"
 local Attack = require "attack"
 local Elevator = require "elevator"
+local Teleport = require "teleport"
 
 VM.init()
 
@@ -39,6 +40,7 @@ VM.log = write
 ui_sup.app("terminal")
 
 Attack.start()
+Teleport.start()
 Elevator.start()
 
 while true do

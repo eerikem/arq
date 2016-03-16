@@ -148,6 +148,7 @@ function UI:align(...)
   if x < 1 then x = 1 end
   if y < 1 then y = 1 end
   self.term.reposition(x,y)
+  self.alignment = arg
 end
 
 function UI:write( sText,noscroll)

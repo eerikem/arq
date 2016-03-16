@@ -4,7 +4,7 @@ local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, wid
 
 function Graphic:new(o)
   if type(o)=="string" then
-  o = {text = o} end
+  o = {text = o,width = string.len(o)} end
   local o = o or {}
   setmetatable(o, self)
   self.__index = self
@@ -66,7 +66,7 @@ function Graphic:onMe(x,y)
   end
 --  VM.log("Checking absY: "..self.absY.." and height: "..self.height)
   if self.absY+ indentY <= y and y < self.absY + indentY + self.height then
---    VM.log("X: "..x.." absX: "..self.absX.." width: "..self.width)
+--    VM.log("X: "..x.." absX: "..self.absX.." width: "..width)
     if x >= self.absX + indentX and x < self.absX + indentX + width then
       return true
     end

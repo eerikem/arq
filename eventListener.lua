@@ -56,8 +56,8 @@ function Server.handle_cast(Request,State)
     or event == "mouse_up" or event == "mouse_drag" then
     State.reactor:handleEvent(unpack(Request))
   elseif event == "sleep" then
-    VM.log("Events got sleep")
     local _,time,From = unpack(Request)
+    VM.log("Events got sleep "..time)
     local timer = os.startTimer( time )
     State.timers[timer]=From
   elseif event == "timer" then

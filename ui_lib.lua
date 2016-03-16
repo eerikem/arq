@@ -16,6 +16,13 @@ function UI:beep()
   exec(errorSound)
 end
 
+function UI:ping()
+  exec(selectSound)
+end
+
+function UI:tap()
+  exec(tapSound)
+end
 
 function UI:new(term)
   if not term then error("UI needs a term",2) end
@@ -112,7 +119,7 @@ function UI:update()
   self.term.setCursorPos(1,1)
   self:draw(self.pane)
   if not self.redraw then error("no redraw",2)end
-  VM.log("updating")
+--  VM.log("updating")
   return self:redraw()
   --term.setBackgroundColor(back)
 end

@@ -8,7 +8,7 @@ local proto = {id="proto"}
 
 function Panel:new()
   --content is a dictionary, index an ordered List
-  local o = {content = {},index = {},reactor = Reactor:new()}
+  local o = {content = {},index = {},reactor = Reactor:new(),layout="list"}
   setmetatable(o, self)
   self.__index = self
   o.id="panel"..panelIndex
@@ -34,7 +34,24 @@ function Panel:registerPanelHandlers()
   self.reactor:register("selected",handler)
 end
 
-Panel.onMe = Graphic.onMe
+function Panel:onMe(x,y)
+  local indentX = self.xpos - 1
+  local indentY = self.ypos - 1
+  local width = self.width
+  if width == "max" then
+    width = 1000 --TODO better layout management
+  end
+  local height = self.height
+  if self.staticHeight then
+    height = self.staticHeight end
+  if self.absY+ indentY <= y and y < self.absY + indentY + height then
+    if x >= self.absX + indentX and x < self.absX + indentX + width then
+      return true
+    end
+  end
+  return false
+end
+
 Panel.setOnSelect= Graphic.setOnSelect
 
 function proto:new(o)
@@ -134,8 +151,8 @@ function proto:write(ui,noscroll)
   end
   
   local x2,y2 = ui.term.getCursorPos()
-  if y2-self.absY == 0 then
-    self.width = x2-self.absX
+  if y2-self.absY-(self.ypos-1) == 0 then
+    self.width = x2-self.absX-(self.xpos - 1)
   else self.width = ui.term.getSize()
   end
   
@@ -218,6 +235,10 @@ function Panel:getSize(width)
   return maxWidth + xIndent, absHeight + yIndent
 end
 
+function Panel:setLayout(layout)
+  self.layout = layout
+end
+
 function Panel:drawSubset(ui,start,num)
   if start < 1 or start + num -1 > #self.index then
     error("bad indexes for subset",2) end
@@ -228,7 +249,7 @@ function Panel:drawSubset(ui,start,num)
   while num > 0 do
     if first then first = false
     else incCursorPos(ui.term,1) c = c + 1 end
-    c = c + self.index[start]:redraw(ui,true)
+    c = c + self:drawItem(ui,self.index[start],true)
     start = start + 1
     num = num - 1
   end
@@ -270,7 +291,7 @@ function Panel:drawFromLine(ui,n)
       else incCursorPos(ui.term,x) end
 --      sum = sum + 1 end
       if sum - ui.pane.index[i].height + 1 >= n then
-        sum = sum + ui.pane.index[i]:redraw(ui,true)
+        sum = sum + self:drawItem(ui,ui.pane.index[i],true)
       else
         sum = sum + ui.pane.index[i]:drawFromLine(ui,n-(sum-ui.pane.index[i].height),true)
       end
@@ -288,38 +309,75 @@ function Panel:redraw(ui,noscroll)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
   self:applyColors(ui)
-  local x = self:setCursor(ui)
+  local x,y = self:setCursor(ui)
   if self.width then
-    local X,Y = ui.term.getCursorPos()
     local w = self.width
     if w == "max" then
       w = ui.term.getSize() end
+    local h = self.height
+    if self.staticHeight then
+      h = self.staticHeight end
 --    VM.log("Panel redraw max height: "..self.height)
     local first = true
-    for n=1, self.height do
+    for n=1, h do
       if first then first = false
       else incCursorPos(ui.term,x) end
       for m=1, w do
         ui.term.write(" ")
       end
     end
-    ui.term.setCursorPos(X,Y)
+    ui.term.setCursorPos(x,y)
   end
   
-  local first = true
-  local lineCounter = 0
-  for _,V in ipairs(self.index) do
-    if first then first = false
-    else incCursorPos(ui.term,x)
-    lineCounter = lineCounter + 1 end
-    lineCounter = lineCounter + V:redraw(ui,noscroll)
+  local function drawList()
+    local first = true
+    local lineCounter = 0
+    for _,V in ipairs(self.index) do
+      if first then first = false
+      else incCursorPos(ui.term,x)
+      lineCounter = lineCounter + 1 end
+      lineCounter = lineCounter + self:drawItem(ui,V,noscroll)
+    end
+    self.height = lineCounter + self.ypos
+    ui.term.setTextColor(color)
+    ui.term.setBackgroundColor(back)
+    return lineCounter
   end
-  self.height = lineCounter + self.ypos
-  ui.term.setTextColor(color)
-  ui.term.setBackgroundColor(back)
-  return lineCounter
+  
+  local function drawStatic()
+    local maxHeight = 0
+    local maxWidth = 0
+    local width,height = ui.term.getSize()
+    for _,V in ipairs(self.index) do
+      self:drawItem(ui,V,noscroll)
+      local w,h = V:getSize(width - (x - 1))
+      if w > maxWidth then maxWidth = w end
+      if h > maxHeight then maxHeight = h end
+      ui.term.setCursorPos(x,y)
+    end
+    self.height = maxHeight + self.ypos - 1
+    if type(self.width) ~= "string" then
+      self.width = maxWidth + self.xpos - 1
+    end
+    return maxHeight - 1 
+  end
+  
+  if self.layout == "list" then
+    return drawList()
+  elseif self.layout == "static" then
+    return drawStatic()
+  else
+    error("Unsupported layout "..self.layout)
+  end
 end
 
+function Panel:drawItem(ui,obj,noscroll)
+  return obj:redraw(ui,noscroll)
+end
+
+function Panel:setHeight(height)
+  self.staticHeight = height
+end
 
 function Panel:setContent(...)
   self.content = {}--TODO remove metatable?
@@ -354,6 +412,7 @@ end
 
 
 function Panel:add(c)
+  if not c then error("obj expected",2) end
 --  local o = {__index==c}
 --  setmetatable(o,o)
   --local o = c:new()

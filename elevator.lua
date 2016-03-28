@@ -60,8 +60,29 @@ local function elevatorUI(Co,floor)
     end
   end
   
+  local denied = Graphic:new("DENIED")
+  denied.xpos = 2
+  denied.ypos = 2
+  denied:setTextColor(colors.red)
+  local errorHandler = function(button)
+    return function()
+      local lvl = buttonPanel.content[button]
+      VM.log("Button for "..lvl.." pressed!")
+      ui:beep()
+      buttonPanel:add(denied)
+      ui:update()
+      
+      local fun = function()
+        EVE.sleep(1)
+        buttonPanel:remove(denied)
+        ui:update()
+      end
+      VM.spawn(fun)
+    end
+  end
+  
   button1:setOnSelect(ui,handler(button1))
-  button2:setOnSelect(ui,handler(button2))
+  button2:setOnSelect(ui,errorHandler(button2))
   button3:setOnSelect(ui,handler(button3))
   
   buttonPanel.width = "max"

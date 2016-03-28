@@ -1,6 +1,6 @@
-group = {}
+local Group = {}
 
-function group.group(x,y,z,a,b,c)
+function Group.group(x,y,z,a,b,c)
   local T = {}
   local o,p,q
   if x <= a then o = 1 else o = -1 end
@@ -17,19 +17,21 @@ function group.group(x,y,z,a,b,c)
   return T
 end
 
-function group.insert(T,x,y,z)
+function Group.insert(T,x,y,z)
   table.insert(T,{x = x,y = y,z = z})
 end
 
-function group.combine(T,T2)
+function Group.combine(T,T2)
   for _,v in ipairs(T2) do
     table.insert(T,v)
   end
 end
 
-function group.execute(T,cmd)
+function Group.execute(T,cmd)
   for _,block in ipairs(T) do
     local str = string.format(cmd,block.x,block.y,block.z)
     exec(str)
   end
 end
+
+return Group

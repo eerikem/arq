@@ -22,7 +22,6 @@ Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
 Group = require "group"
---Attack = require "attack"
 local Attack = require "attack"
 local Elevator = require "elevator"
 local Teleport = require "teleport"
@@ -39,7 +38,7 @@ VM.log = write
 
 ui_sup.app("terminal")
 
-Attack.start()
+--Attack.start()
 Teleport.start()
 Elevator.start()
 

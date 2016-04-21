@@ -5,6 +5,13 @@
 
 local args = {...}
 
+function map(func, tbl)
+     local newtbl = {}
+     for i,v in pairs(tbl) do
+         newtbl[i] = func(v)
+     end
+     return newtbl
+ end
 
 print = function() end
 --write = function() end
@@ -25,6 +32,8 @@ Group = require "group"
 local Attack = require "attack"
 local Elevator = require "elevator"
 local Teleport = require "teleport"
+local Airlock = require "airlock"
+local Observer = require "observer"
 
 VM.init()
 
@@ -37,10 +46,12 @@ local write = ui_sup.statusWindow("terminal")
 VM.log = write
 
 ui_sup.app("terminal")
+Observer.observerUI("terminal")
 
 --Attack.start()
 Teleport.start()
-Elevator.start()
+--Elevator.start()
+Airlock.start()
 
 while true do
   --VM.flush()

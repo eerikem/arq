@@ -435,6 +435,19 @@ function test_radio_panel()
   luaunit.assertEquals(pane.focus,2)
 end
 
+function test_replace()
+  local g = Graphic:new("Item1")
+  ui:add(g)
+  ui:update()
+  sleep(1)
+  local h = Graphic:new("Item2")
+  ui.pane:replace(g,h)
+  --Warning, comparing graphic with reactor.parent causes java overflow
+--  luaunit.assertEquals(ui.pane.index,{h})
+  luaunit.assertEquals(ui.pane.content,{[h]=1})
+  ui:update()
+end
+
 function tearDown_each()
   ui = nil
   console.restoreCursor()

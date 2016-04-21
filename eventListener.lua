@@ -1,4 +1,6 @@
 
+local ui_sup = require 'ui_supervisor'
+
 local Server = {}
 
 function Server.start_link()
@@ -32,11 +34,12 @@ local function clickHandler(server)
 end
 
 function Server.init()
-  local reactor = Reactor:new()
+  local o = {clickCounter=0,timers={}}
+  local reactor = Reactor:new(o)
+  o.reactor = reactor
   for event,handler in pairs(UI_Events) do
     reactor:register(event,handler)
   end
-  local o = {reactor = reactor,clickCounter=0,timers={}}
   reactor:register("mouse_click",clickHandler(o))
   reactor:register("mouse_up",clickHandler(o))
   reactor:register("mouse_drag",clickHandler(o))
@@ -57,14 +60,14 @@ function Server.handle_cast(Request,State)
     State.reactor:handleEvent(unpack(Request))
   elseif event == "sleep" then
     local _,time,From = unpack(Request)
-    VM.log("Events got sleep "..time)
+--    VM.log("Events got sleep "..time)
     local timer = os.startTimer( time )
     State.timers[timer]=From
   elseif event == "timer" then
-    VM.log("Events got timer")
+--    VM.log("Events got timer")
     local timer = Request[2]
     if State.timers[timer] then
-      VM.log("sending wake")
+--      VM.log("sending wake")
       VM.send(State.timers[timer],"wake")
       State.timers[timer]=nil
     end
@@ -87,6 +90,18 @@ function Server.handle_cast(Request,State)
   end
   --return "noreply", State
   return State
+end
+
+function Server.handle_info(Request,State)
+  VM.log("Warning handle info on EVE")
+  return State
+end
+
+function Server.tick(time)
+  if not time then return end
+  if VM.running() == "ROOT" then
+    return sleep(time) end
+  gen_server.cast("events",{"sleep",time,VM.running()},"infinite")
 end
 
 local function sleep( nTime )

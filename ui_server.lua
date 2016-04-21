@@ -130,17 +130,18 @@ end
 
 function Server.init(term,name)
 
-  --TODO reactor sends events to coroutine handlers
-  local reactor = Reactor:new()
-  for event,handler in pairs(UI_Events) do
-    reactor:register(event,handler)
-  end
-
   local ui = initNativeUI(term,name)
   local windows = {}
   windows[ui] = true 
   
-  return {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new(),reactor = reactor}
+  --TODO reactor sends events to coroutine handlers
+  local o = {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new()}
+  o.reactor = Reactor:new(o)
+  for event,handler in pairs(UI_Events) do
+    o.reactor:register(event,handler)
+  end
+  
+  return o
 end
 
 local function newWindow(State,Co,w,h)
@@ -156,6 +157,12 @@ local function newWindow(State,Co,w,h)
     local Msg = gen_server.cast(Co,{"update",self})
 --    if Msg ~= "ok" then error("Problem got: "..Msg) end
   end
+  
+  ui.redraw_sync = function(self)
+    local Msg = gen_server.call(Co,{"update",self})
+    if Msg ~= "ok" then error("Problem got: "..Msg) end
+  end
+  
   table.insert(State.stack,ui)
   State.focus = ui 
   return ui
@@ -205,6 +212,11 @@ function Server.handle_cast(Request,State)
     VM.log("Unkown signal type received on "..State.ui.name)
   end
   --return "noreply", State
+  return State
+end
+
+function Server.handleInfo(Request,State)
+  VM.log("Warning UI server handleInfo")
   return State
 end
 

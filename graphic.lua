@@ -8,7 +8,7 @@ function Graphic:new(o)
   local o = o or {}
   setmetatable(o, self)
   self.__index = self
-  o.reactor = Reactor:new()
+  o.reactor = Reactor:new(o)
   return o
 end
 

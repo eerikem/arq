@@ -62,7 +62,8 @@ function Bar:new(Co,height)
   ui:setText(colors.gray)
   ui:update()
    
-  local o = {parent = Co,height = height,ui = ui,reactor = Reactor:new()}
+  local o = {parent = Co,height = height,ui = ui}
+  o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self
   

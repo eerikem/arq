@@ -27,7 +27,8 @@ end
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {pane = Panel:new(),term = term,reactor = Reactor:new(),selectables={},redraw = term.redraw}
+  local o = {pane = Panel:new(),term = term,selectables={},redraw = term.redraw}
+  o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self
   
@@ -122,6 +123,15 @@ function UI:update()
 --  VM.log("updating")
   return self:redraw()
   --term.setBackgroundColor(back)
+end
+
+function UI:update_sync()
+  self.pane:applyColors(self)
+  self.term.clear()
+  self.term.setCursorPos(1,1)
+  self:draw(self.pane)
+  if not self.redraw_sync then error("no redraw",2)end
+  return self:redraw_sync()
 end
 
 function UI:align(...)
@@ -306,8 +316,8 @@ function UI:registerUIListeners()
     x,y = self:relativeXY(x,y)
 --    VM.log("UI "..self.pane.id.." reactor got "..table.concat({id,button,x,y}," "))
     for obj,_ in pairs(self.selectables) do
-      if obj:onMe(x,y) then
-        obj.reactor:handleEvent(event,button,x,y)
+      if obj:onMe(x,y) and obj.reactor.run then
+        return obj.reactor:handleEvent(event,button,x,y)
       end
     end
   end
@@ -315,9 +325,9 @@ function UI:registerUIListeners()
   local function touchHandler(event,x,y)
     x,y = self:relativeXY(x,y)
     for obj,_ in pairs(self.selectables) do
-      if obj:onMe(x,y) then
+      if obj:onMe(x,y) and obj.reactor.run then
 --        VM.log("touch on ui "..obj.id.." "..x.." "..y)
-        obj.reactor:handleEvent(event,x,y)
+        return obj.reactor:handleEvent(event,x,y)
       else
 --        VM.log("touch not on me")
       end

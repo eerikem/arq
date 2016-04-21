@@ -1,151 +1,282 @@
+local gen_server = require "gen_server"
+local Bundle = require "bundle"
+local Graphic = require "graphic"
+local Panel = require "ui_obj"
 
-
-local airlock = {}
-
-local title = 'Airlock' 
-local locked = false
-local sealed = true
-local active = false
-local uis = {}
-airlock.uis = uis
-
-local function lockMenuItem()
-  if locked then
-    return "Unlock?"
-  else
-    return "Lock"
-  end
-end
-
+local CABLE_SIDE = "back"
 local doors = {
-  BUNDLE:new("back",colors.white,"monitor_1"),
-  BUNDLE:new("back",colors.magenta,"monitor_3")
-  }
-
-local delay = 2
-
-local open = function (door)
-  if not locked then
-    door:enable()
-  end
-end
-
-local close = function (door)
-  door:disable()
-end
-
-
-local cycleAirlock = function (ui)
-  if not locked and sealed then
-    sealed = false
-    writeStatus("Cycling Airlock")
-    ui.clear()
-    ui:printCentered("Airlock",1)
-    ui:printCentered(" OPEN ",3)
-    local insideDoor, outsideDoor
-    if doors[1]:getName() == ui.name then
-      insideDoor = doors[1]
-      outsideDoor = doors[2]
-    else 
-      insideDoor = doors[2]
-      outsideDoor = doors[1]
-    end
-    open(insideDoor)
-    ui:showDelay(delay,4)
-    close(insideDoor)
-    ui:printCentered("CYCLING",3)
-    ui:showDelayTwo(delay,4)
-    open(outsideDoor)
-    ui:printCentered("LOCKED ",3)
-    ui:undoDelay(delay,4)
-    close(outsideDoor)
-    --ui:clearStatus()
-    ui.menu.draw()
-    writeStatus("Cycled Airlock")
-    
-    sealed = true
-    active = false
-    signal("locked")
-  end
-end
-
-local cycleLock2 = function (ui)
-    ui.clear()
-    ui:printCentered("Airlock",1)
-    ui:printCentered("LOCKED ",3)
-    ui:showDelay(delay,4)
-    ui:printCentered("CYCLING",3)
-    ui:showDelayTwo(delay,4)
-    ui:printCentered(" OPEN  ",3)
-    ui:undoDelay(delay,4)
-    ui.menu.draw()
-end
-
-local lockPeripherals = function (ui)
-  --writeStatus("lockPerf")
-  error("Called lockPerf some long message",2)
-  locked = not locked
-  signal("menuUpdate")
-end
-
-local exit = function (ui)
-  ui:terminate()
-end
-
-local startCycle = function(ui)
-  if not active and not locked then
-    active = true
-    signal("cycle",ui)
-    waitSignal("locked")
-  else
-    if locked then
-       ui:printCentered("LOCKED!",3)
-       waitSeconds(1.5)
-    end
-  end
-end
-
-local menu = {
-  'Cycle', startCycle,
-  'Other',{
-    lockMenuItem, lockPeripherals,
-    'Back', "BACK"
-    }
+  outer = Bundle:new(CABLE_SIDE,colors.lightBlue,"monitor_1"),
+  inner = Bundle:new(CABLE_SIDE,colors.lime,"monitor_3")
+--  outer = false,
+--  inner = false
 }
 
-local cycleMenus = function()
-  while true do
-    local event, ui = waitSignal("cycle")
-    if ui then
-      local ui2
-      if uis[1] == ui then ui2 = uis[2]
-      else ui2 = uis[1] end
-      runProcess(function() cycleAirlock(ui) end,"DoorCycler1" )
-      runProcess(function() cycleLock2(ui2) end,"DoorCycler2" )
+local function initDoors(doors)
+  VM.log("Running initDoors")
+  for _,door in pairs(doors) do
+    door:disable()
+  end
+end
+
+local MIDDLE = "monitor_5"
+local DELAY = 2
+
+local function open(door)
+  doors[door]:enable()
+--  doors[door] = true
+end
+local function close(door)
+  doors[door]:disable()
+--  doors[door] = false
+end
+
+local Airlock = {}
+
+----------------
+--External API--
+----------------
+
+function Airlock.open(Co,door)
+  return gen_server.call(Co,{"open",door})
+end
+
+function Airlock.close(Co,door)
+  return gen_server.call(Co,{"close",door})
+end
+
+function Airlock.start()
+  local Co = Airlock.start_link()
+end
+
+---------------
+--Server & UI--
+---------------
+
+function Airlock.start_link()
+  return gen_server.start_link(Airlock,{},{})
+end
+
+local function outerUI(Co,door)
+  local ui = ui_server.newWindow(Co,7,5)
+  local title = Graphic:new("AIRLOCK")
+  local body = Panel:new()
+  local open = Graphic:new("OPEN")
+  local close = Graphic:new("CLOSE")
+  local cycling = Graphic:new("CYCLING")
+  local cycler = Graphic:new("       ")
+  body.width = "max"
+  open.xpos = 2
+  open.ypos = 2
+  close.xpos = 2
+  close.ypos = 2
+  cycling.ypos = 2
+  ui:add(title)
+  body:add(open)
+  body:add(cycler)
+  ui:add(body)
+  
+  close.reactor:stop()
+  
+  local function enable(button2)
+    local button1 = body.index[1]
+    body:replace(button1,button2)
+    button1.reactor:stop()
+    button2.reactor:start()
+    ui:update()
+    return button1
+  end
+  
+  local function tock(A,B,C)
+    cycler.text = A
+    ui:update()
+    EVE.tick(0.2)
+    local r = VM.receive()
+    if r == "wake" then
+      return tock(B,C,A)
+    elseif r == "stop" then
+      cycler.text = "       "
+      ui:update()
+    else
+      error("cycleHandler received bad msg")
     end
   end
-end
-
-airlock.init = function()
-  local runs = {}
-  for n=1, #doors do
-    local ui = UI:aquireMonitor(doors[n]:getName())
-    table.insert(uis,ui)
-    ui.setBackgroundColor(colors.orange)
-    ui.clear()
-    ui.setBackgroundColor(colors.black)
+  
+  local function tick()
+    tock(" >  >  ","  >  > ",">  >  >")
   end
-end
-
-airlock.main = function()
-  for n=1, #uis do
-    local m = uis[n]:readMenu(menu)
-    --m.run()
-    m.setTitle(title)
-    uis[n].menu = m
-    runProcess(m.cycle,"airlock_main"..n)
+  
+  local ticker = nil
+  
+  local function cycle()
+    enable(cycling)
+    ticker = VM.spawnlink(tick)
+--    for i=1,5 do
+--      cycler.text = " >  >  "
+--      ui:update()
+--      EVE.sleep(0.2)
+--      cycler.text = "  >  > "
+--      ui:update()
+--      EVE.sleep(0.2)
+--      cycler.text = ">  >  >"
+--      ui:update()
+--      EVE.sleep(0.2)
+--    end
   end
-  runProcess(cycleMenus,"cycle_lstnr")
+
+  local function handler(Co,reactor)
+    return function()
+      if reactor.parent == open then
+        local res = Airlock.open(Co,door)
+        if res == "opened" then
+          ui:ping()
+          enable(close)
+        elseif res == "open" then
+          ui:tap()
+          enable(close)
+        elseif res == "cycling" then
+          ui:ping()
+          cycle()
+        end
+      elseif reactor.parent == close then
+        local res = Airlock.close(Co,door)
+        if res == "closed" then
+          ui:ping()
+          enable(open)
+        else
+          ui:tap()
+          enable(open)
+        end
+      end
+    end
+  end
+  
+  local function stopTicker()
+    if ticker then
+      VM.log("Sending stop to ticker")
+      VM.send(ticker,"stop")
+    else
+      error("No ticker to stop!",2)
+    end
+    ticker = nil
+  end
+  
+  local function openHandler()
+    stopTicker()
+    VM.log("stopped ticker!")
+    enable(close)
+  end
+  
+  local function closeHandler()
+    stopTicker()
+    enable(open)
+  end
+  
+  open:setOnSelect(ui,handler(VM.running(),open.reactor))
+  close:setOnSelect(ui,handler(VM.running(),close.reactor))
+  ui.reactor:register("close",closeHandler)
+  ui.reactor:register("open",openHandler)
+  ui.reactor:register("cycle",cycle)
+  
+  local function bright()
+    ui:setBackground(colors.lightGray)
+    ui:setText(colors.gray)
+    body:setTextColor(colors.orange)
+    body:setBackgroundColor(colors.gray)
+    cycling:setTextColor(colors.white)
+    cycler:setTextColor(colors.orange)
+  end
+    
+  bright()
+  ui:update()
+  
+  return ui
 end
 
-return airlock
+function Airlock.testUI(Co)
+  return outerUI(Co)
+end
+
+function Airlock.init()
+  initDoors(doors)
+  local uis = {}
+  for name,door in pairs(doors) do
+    uis[name] = outerUI(door.name,name)
+  end
+  local State = {doors = doors,cycling = false,uis = uis}
+  return State
+end
+
+local function otherDoor(doors,door)
+  for d,_ in pairs(doors) do
+    if d ~= door then return d end
+  end 
+end
+
+local function cycle(State,door,other)
+  VM.log("Cycling airlock")
+  close(other)
+--  State.cycling = true
+  State.uis[other].reactor:handleEvent("cycle")
+  EVE.sleep(1)
+  State.uis[other].reactor:handleEvent("close")
+  State.uis[door].reactor:handleEvent("open")
+  open(door)
+end
+
+--TODO redundant?!
+local function cycle_call(Request,From,State)
+  gen_server.reply(From,"ok")
+  return State
+end
+--TODO redundant?!
+local function cycle_cast(Request,State)
+  return State
+end
+
+function Airlock.handle_call(Request,From,State)
+  if State.cycling then return cycle_call(Request,From,State) end
+  local event = Request[1]
+  if event == "observer" then
+    gen_server.reply(From,State)
+  elseif event == "open" then
+    local door = Request[2]
+    local other = otherDoor(State.doors,door)
+    if State.doors[door]:isOut() then
+--    if State.doors[door] then
+      gen_server.reply(From,"open")
+    else
+      if State.doors[other]:isOut() then
+--      if State.doors[other] then
+        gen_server.reply(From,"cycling")
+        --cycle the airlock!
+        cycle(State,door,other)
+      else
+        open(door)
+        gen_server.reply(From,"opened")
+      end
+    end
+  elseif event == "close" then
+    local door = Request[2]
+    if State.doors[door]:isOut() then
+--    if State.doors[door] then
+      close(door)
+      gen_server.reply(From,"closed")
+    else
+      gen_server.reply(From,"not_open")
+    end
+  end
+  return State
+end
+
+function Airlock.handle_cast(Request,State)
+  if State.cycling then return cycle_cast(Request,State) end
+  VM.log("Received "..Request)
+  return State
+end
+
+function Airlock.handle_info(Request,State)
+  VM.log("got: "..unpack(Request))
+  return State
+end
+
+return Airlock

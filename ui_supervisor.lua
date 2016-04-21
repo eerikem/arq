@@ -42,10 +42,6 @@ local function linkNewMon(name,uis)
 end
 
 function Server.init(eventCo)
-  local reactor = Reactor:new()
-  for event,handler in pairs(UI_Events) do
-    reactor:register(event,handler)
-  end
   local Uis = {terminal = link_ui(term.current(),"Terminal")}
   VM.register("terminal",Uis.terminal)
 --  subscribe(eventCo,"mouse_click")
@@ -53,7 +49,13 @@ function Server.init(eventCo)
   for n,name in ipairs(peripheral.getNames()) do
     linkNewMon(name,Uis)
   end
-  return {uis = Uis, events = eventCo,reactor = reactor}
+  local o = {uis = Uis, events = eventCo}
+  local reactor = Reactor:new(o)
+  for event,handler in pairs(UI_Events) do
+    reactor:register(event,handler)
+  end
+  o.reactor = reactor
+  return o
 end
 
 local getNames = function(State)
@@ -102,6 +104,11 @@ function Server.handle_cast(Request,State)
   else
     return parse(State,unpack(Request))
   end
+  return State
+end
+
+function Server.handleInfo(Request,State)
+  VM.log("Warning handle Info received on UI sup")
   return State
 end
 

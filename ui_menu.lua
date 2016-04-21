@@ -27,7 +27,7 @@ function Menu.inlineOnFocus(obj,subObj)
   obj.drawFocus = function (graphic,ui,...)
     local n = 1
     local x = ui.term.getCursorPos()
-    --todo passing graphic to proto.drawFocus side effects!?!?
+    --TODO passing graphic to proto.drawFocus side effects!?!?
     n = n + graphic.proto.drawFocus(graphic,ui,arg)
     incCursorPos(ui.term,x)
     n = n + ui:draw(subObj)
@@ -106,6 +106,7 @@ local function focusHandler(ui,menu)
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
         menu.focus = menu.content[obj]
+        obj.reactor:handleEvent("focus")
         ui:update()
         if event == "monitor_touch" then
           return obj.reactor:handleEvent("selected")
@@ -131,8 +132,10 @@ local function scrollHandler(ui,menu)
   return function(_,direction)
     if direction == "scroll_up" then
       menu:dec()
+      menu.index[menu.focus].reactor:handleEvent("focus")
     elseif direction == "scroll_down" then
       menu:inc()
+      menu.index[menu.focus].reactor:handleEvent("focus")
     else
       error("bad scroll event")
     end
@@ -144,9 +147,11 @@ local function keyHandler(ui,menu)
   return function(_,key)
     if key == keys.up then
       menu:dec()
+      menu.index[menu.focus].reactor:handleEvent("focus")
       ui:update()
     elseif key == keys.down then
       menu:inc()
+      menu.index[menu.focus].reactor:handleEvent("focus")
       ui:update()
     elseif key == keys.enter then
       return menu.index[menu.focus].reactor:handleEvent("selected")

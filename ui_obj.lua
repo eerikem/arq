@@ -8,7 +8,8 @@ local proto = {id="proto"}
 
 function Panel:new()
   --content is a dictionary, index an ordered List
-  local o = {content = {},index = {},reactor = Reactor:new(),layout="list"}
+  local o = {content = {},index = {},layout="list"}
+  o.reactor = Reactor:new(o)
   setmetatable(o, self)
   self.__index = self
   o.id="panel"..panelIndex
@@ -386,10 +387,34 @@ function Panel:setContent(...)
   end
 end
 
-function Panel:remove(c)--TODO remove metatable?
+function Panel:remove(c)
+--TODO remove metatable?
+--TODO shift index values in self.content?!?
   if self.content[c] then
-    table.remove(self.index,self.content[c])
+    local pos = self.content[c]
+    table.remove(self.index,pos)
     self.content[c]=nil
+    return pos
+  end
+  return nil
+end
+
+function Panel:insert(c,pos)
+  table.insert(self.index,pos,c)
+  self.content[c]=pos
+  for i = pos + 1, table.maxn(self.index) do
+    self.content[self.index[i]] = self.content[self.index[i]] + 1 
+  end
+end
+
+function Panel:replace(c,_c)
+  if not c or not _c then error("badarg",2) end
+  local pos = self:remove(c)
+  if pos then
+    self:insert(_c,pos)
+    self:applyProto(_c)
+  else
+    error("badarg, item not found",2)
   end
 end
 
@@ -409,7 +434,6 @@ function Panel:applyProto(c)
       c.write = c.proto.write end
   end
 end
-
 
 function Panel:add(c)
   if not c then error("obj expected",2) end

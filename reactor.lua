@@ -2,8 +2,9 @@ local Reactor = {run = true}
 
 local reactorIndex = 0
 
-function Reactor:new()
-  local o = {handlers = {}}
+function Reactor:new(parent)
+  if not parent then error("badarg, no parent",2) end
+  local o = {handlers = {},parent=parent}
   setmetatable(o,self)
   self.__index = self
   o.id = "reactor"..reactorIndex
@@ -12,7 +13,7 @@ function Reactor:new()
 end
 
 function Reactor:stop() self.run = false end
-function Reactor:run() self.run = true end
+function Reactor:start() self.run = true end
 
 function Reactor:remove(h)
   if not h or not h.id then return end
@@ -30,20 +31,24 @@ function Reactor:register(event,h)
 end
 
 function Reactor:handleEvent(...)
-  if arg[1] and self.handlers[arg[1]] then
-    local handler = self.handlers[arg[1]]
-    return handler(unpack(arg))
-  else
-    VM.log(self.id.." received unhandled event: "..arg[1],2)
+  if self.run then
+    if arg[1] and self.handlers[arg[1]] then
+      local handler = self.handlers[arg[1]]
+      return handler(unpack(arg))
+    else
+      VM.log(self.id.." received unhandled event: "..arg[1],2)
+    end
   end
 end
 
 function Reactor:handleReq(Req,State)
-  if Req[1] and self.handlers[Req[1]] then
-    local handler = self.handlers[Req[1]]
-    return handler(Req,State)
-  else
-    VM.log("reactor received unhandled event: "..Req[1],2)
+  if self.run then
+    if Req[1] and self.handlers[Req[1]] then
+      local handler = self.handlers[Req[1]]
+      return handler(Req,State)
+    else
+      VM.log("reactor received unhandled event: "..Req[1],2)
+    end
   end
 end
 

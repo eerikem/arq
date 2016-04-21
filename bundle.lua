@@ -36,11 +36,20 @@ function BUNDLE:enable()
 end
 
 function BUNDLE:disable()
-  redstone.setBundledOutput(self.side,colors.minus(redstone.getBundledOutput(self.side),self.cable))
+  redstone.setBundledOutput(self.side,colors.subtract(redstone.getBundledOutput(self.side),self.cable))
 end
 
+--deprecated
 function BUNDLE:isOn()
   return colors.test(rs.getBundledInput(self.side),self.cable)
+end
+
+function BUNDLE:isIn()
+  return colors.test(rs.getBundledInput(self.side),self.cable)
+end
+
+function BUNDLE:isOut()
+  return colors.test(rs.getBundledOutput(self.side),self.cable)
 end
 
 function BUNDLE:pulse()

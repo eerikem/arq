@@ -2,7 +2,7 @@
 local Client = {}
 
 function Client:new(Co)
-  local ui = ui_sup.newWindow(Co,11,8)
+  local ui = ui_sup.newWindow(Co,11,10)
   local l = List.fromArray(ui_sup.getUInames())
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
@@ -22,9 +22,15 @@ function Client:new(Co)
   ui:add(t)
   ui:add(body)
   m:link(ui)
-  ui:align("center")
+  ui:align("right")
   ui:update()
-  t.text = "UI List2"
+  
+  local function fun()
+    t.text = "Flush "..FLUSHER
+    ui:update()
+  end
+  t:setOnSelect(ui,fun)
+  
   ui:update()
 end
 

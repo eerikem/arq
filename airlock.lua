@@ -46,6 +46,7 @@ end
 
 function Airlock.start()
   local Co = Airlock.start_link()
+  VM.register("airlock",Co)
 end
 
 ---------------
@@ -109,7 +110,7 @@ local function outerUI(Co,door)
   
   local function cycle()
     enable(cycling)
-    ticker = VM.spawnlink(tick)
+    ticker = VM.spawn(tick)
 --    for i=1,5 do
 --      cycler.text = " >  >  "
 --      ui:update()

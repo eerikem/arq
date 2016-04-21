@@ -1,5 +1,5 @@
 local Reactor = require 'reactor'
-
+local Graphic = require 'graphic'
 local panelIndex = 0
 local protoIndex = 0
 local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0,noscroll = false}

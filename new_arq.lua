@@ -46,7 +46,6 @@ local write = ui_sup.statusWindow("terminal")
 VM.log = write
 
 ui_sup.app("terminal")
-Observer.observerUI("terminal")
 
 --Attack.start()
 Teleport.start()

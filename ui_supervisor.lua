@@ -138,7 +138,7 @@ function Server.app(Co)
 end
 
 function Server.statusWindow(Co)
-  local bar = statusBar:new(Co,6)
+  local bar = statusBar:new(Co,4)
   return function(str)
     bar:write(str)
   end

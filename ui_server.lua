@@ -60,6 +60,19 @@ local function handleTouch(Req,State)
   return State 
 end
 
+local function removeUI(State,ui)
+  for i,UI in ipairs(State.stack) do
+    if ui == UI then
+      table.remove(State.stack,i)
+      ui.term.setVisible(false)
+      if State.focus == ui then
+        --TODO unsafe indexing here
+        State.focus = State.stack[i-1]
+      end
+    end
+  end
+end
+
 local i = 0
 local function redrawStack(State,ui)
   i = i + 1
@@ -194,6 +207,9 @@ function Server.handle_cast(Request,State)
       EVE.subscribe("events",event)
     elseif event == "update" then
       local ui = Request[2]
+      redrawStack(State,ui)
+    elseif event == "remove" then
+      removeUI(State,Request[2])
       redrawStack(State,ui)
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)

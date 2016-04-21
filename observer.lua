@@ -4,6 +4,8 @@ local Client = {}
 
 local threads = {}
 local names = {}
+local ui
+local alive = false
 
 local function updateThreads()
   for name,thread in pairs(VM.coroutines) do
@@ -35,11 +37,15 @@ local function onThreadFocus(thread,pane)
     if VM.links[thread] then 
       pane.index[3].text = "Links: "..table.concat(toNames(VM.links[thread])," ")
     else pane.index[3].text = "Links:" end
+    pane.index[4].text = "Resumes: "..VM.resumes[thread]
   end
 end
 
 function Client.observerUI(Co)
-  local ui = ui_sup.newWindow(Co,40,13)
+  if alive then return end
+  alive = true
+  
+  ui = ui_sup.newWindow(Co,40,15)
   ui:setBackground(colors.gray)
   ui:setText(colors.lightGray)
   local body = Panel:new()
@@ -61,6 +67,16 @@ function Client.observerUI(Co)
   t.align="center"
   t:setBackgroundColor(colors.gray)
   t:setTextColor(colors.lightGray)
+  
+  local function kill()
+    threads={}
+    names={}
+    gen_server.cast(Co,{"remove",ui})
+    ui = nil
+    alive = false
+  end
+  
+  t:setOnSelect(ui,kill)
   local nameToThread = updateThreads()
   local m = Menu.fromArray(threads)
   for _,item in ipairs(m.index) do
@@ -68,11 +84,11 @@ function Client.observerUI(Co)
     item.reactor:register("focus",onThreadFocus(thread,info))
   end
   m.xpos = 2
-  m.ypos = 2
+  m.ypos = 1
   m:link(ui)
   
   ui:add(t)
-  ui.term.reposition(1,3)
+  ui.term.reposition(1,1)
   body:add(m)
   infoPanel:add(info)
   body:add(infoPanel)

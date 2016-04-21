@@ -1,3 +1,4 @@
+local Observer = require "observer"
 
 local Client = {}
 
@@ -26,7 +27,8 @@ function Client:new(Co)
   ui:update()
   
   local function fun()
-    t.text = "Flush "..FLUSHER
+    VM.spawn(function()
+      Observer.observerUI("terminal") end)
     ui:update()
   end
   t:setOnSelect(ui,fun)

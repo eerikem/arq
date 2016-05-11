@@ -55,7 +55,8 @@ function test_init_lock()
 end
 
 function test_ui()
-  local ui = Airlock.testUI("terminal")
+  local ui,ui2 = Airlock.testUI("terminal")
+  ui2:align("right")
   ui:update()
 end
 

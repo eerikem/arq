@@ -4,6 +4,8 @@ local Graphic = require "graphic"
 local Panel = require "ui_obj"
 
 local CABLE_SIDE = "back"
+local DELAY = 2
+local MIDDLE = "monitor_5"
 local doors = {
   outer = Bundle:new(CABLE_SIDE,colors.lightBlue,"monitor_1"),
   inner = Bundle:new(CABLE_SIDE,colors.lime,"monitor_3")
@@ -17,9 +19,6 @@ local function initDoors(doors)
     door:disable()
   end
 end
-
-local MIDDLE = "monitor_5"
-local DELAY = 2
 
 local function open(door)
   doors[door]:enable()
@@ -42,6 +41,10 @@ end
 
 function Airlock.close(Co,door)
   return gen_server.call(Co,{"close",door})
+end
+
+function Airlock.cycle(Co)
+  return gen_server.call(Co,{"cycle"})
 end
 
 function Airlock.start()
@@ -78,6 +81,7 @@ local function outerUI(Co,door)
   
   close.reactor:stop()
   
+  --TODO Remove Duplicate Hacks
   local function enable(button2)
     local button1 = body.index[1]
     body:replace(button1,button2)
@@ -111,17 +115,6 @@ local function outerUI(Co,door)
   local function cycle()
     enable(cycling)
     ticker = VM.spawn(tick)
---    for i=1,5 do
---      cycler.text = " >  >  "
---      ui:update()
---      EVE.sleep(0.2)
---      cycler.text = "  >  > "
---      ui:update()
---      EVE.sleep(0.2)
---      cycler.text = ">  >  >"
---      ui:update()
---      EVE.sleep(0.2)
---    end
   end
 
   local function handler(Co,reactor)
@@ -163,7 +156,6 @@ local function outerUI(Co,door)
   
   local function openHandler()
     stopTicker()
-    VM.log("stopped ticker!")
     enable(close)
   end
   
@@ -193,17 +185,118 @@ local function outerUI(Co,door)
   return ui
 end
 
+local function innerUI(Co)
+  local ui = ui_server.newWindow(Co,7,5)
+  local title = Graphic:new("AIRLOCK")
+  local body = Panel:new()
+  local button = Graphic:new("CYCLE")
+  local cycling = Graphic:new("CYCLING")
+  local cycler = Graphic:new("       ")
+  local cycling = Graphic:new("CYCLING")
+  local cycler = Graphic:new("       ")
+  body.width = "max"
+  button.xpos = 2
+  button.ypos = 2
+  cycling.ypos = 2
+  ui:add(title)
+  body:add(button)
+  body:add(cycler)
+  ui:add(body)
+  
+  --TODO Remove Duplicate Hacks
+  local function enable(button2)
+    local button1 = body.index[1]
+    body:replace(button1,button2)
+    button1.reactor:stop()
+    button2.reactor:start()
+    ui:update()
+    return button1
+  end
+  
+  local ticker = nil
+  
+  local function tock(A,B,C)
+    cycler.text = A
+    ui:update()
+    EVE.tick(0.2)
+    local r = VM.receive()
+    if r == "wake" then
+      return tock(B,C,A)
+    elseif r == "stop" then
+      cycler.text = "       "
+      ui:update()
+    else
+      error("cycleHandler received bad msg")
+    end
+  end
+  
+  local function tick()
+    tock(" >  >  ","  >  > ",">  >  >")
+  end
+  
+  local function cycle()
+    enable(cycling)
+    ticker = VM.spawn(tick)
+  end
+  
+  local function handler(Co)
+    return function()
+      local res = Airlock.cycle(Co)
+      if res == "cycling" then
+        ui:ping()
+      else
+        ui:beep()
+      end
+    end
+  end
+  
+  local function stopTicker()
+    if ticker then
+      VM.log("Sending stop to ticker "..tostring(ticker))
+      VM.send(ticker,"stop")
+    else
+      error("No ticker to stop!",2)
+    end
+    ticker = nil
+  end
+  
+  local function cycleHandler()
+    stopTicker()
+    enable(button)
+  end
+  
+  button:setOnSelect(ui,handler(VM.running()))
+  ui.reactor:register("cycle",cycle)
+  ui.reactor:register("stop_cycle",cycleHandler)
+  
+  local function bright()
+    ui:setBackground(colors.lightGray)
+    ui:setText(colors.gray)
+    body:setTextColor(colors.orange)
+    body:setBackgroundColor(colors.gray)
+    cycling:setTextColor(colors.white)
+    cycler:setTextColor(colors.orange)
+  end
+  
+  bright()
+  ui:update()
+  
+  return ui
+end
+
 function Airlock.testUI(Co)
-  return outerUI(Co)
+  return outerUI(Co), innerUI(Co)
 end
 
 function Airlock.init()
   initDoors(doors)
   local uis = {}
+  local last = "inner"
   for name,door in pairs(doors) do
     uis[name] = outerUI(door.name,name)
   end
-  local State = {doors = doors,cycling = false,uis = uis}
+  local inner = innerUI(MIDDLE)
+  local State = {doors = doors,cycling = false,uis = uis,inner = inner,last = last}
   return State
 end
 
@@ -218,10 +311,13 @@ local function cycle(State,door,other)
   close(other)
 --  State.cycling = true
   State.uis[other].reactor:handleEvent("cycle")
+  State.inner.reactor:handleEvent("cycle")
   EVE.sleep(1)
+  State.inner.reactor:handleEvent("stop_cycle")
   State.uis[other].reactor:handleEvent("close")
   State.uis[door].reactor:handleEvent("open")
   open(door)
+  State.last = door
 end
 
 --TODO redundant?!
@@ -253,6 +349,7 @@ function Airlock.handle_call(Request,From,State)
         cycle(State,door,other)
       else
         open(door)
+        State.last = door
         gen_server.reply(From,"opened")
       end
     end
@@ -265,6 +362,11 @@ function Airlock.handle_call(Request,From,State)
     else
       gen_server.reply(From,"not_open")
     end
+  elseif event == "cycle" then
+    gen_server.reply(From,"cycling")
+    local other = otherDoor(State.doors,State.last)
+    State.uis[other].reactor:handleEvent("cycle")
+    cycle(State,other,State.last)
   end
   return State
 end

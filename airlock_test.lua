@@ -22,12 +22,12 @@ end
 
 VM.log = writeConsole
 
+Reactor = require 'reactor'
 gen_server = require 'gen_server'
 EVE = require "eventListener"
 luaunit = require 'luaunit'
-ui_server = require 'ui_server'
-Reactor = require 'reactor'
 UI = require 'ui_lib'
+ui_sup = require 'ui_supervisor'
 Graphic = require 'graphic'
 Panel, List = require 'ui_obj'
 Menu = require 'ui_menu'
@@ -35,14 +35,22 @@ Radio = require 'ui_radio_panel'
 Airlock = require 'airlock'
 
 function setup_each()
-  local w,h = term.getSize()
-  local win = window.create(term.current(),w/2+2,1,w/2,h/2)
-  win.setBackgroundColor(colors.gray)
   VM.init()
   local Li = EVE.start_link()
-  local Co = ui_server.start_link(term.current(),"Terminal")
-  VM.register("terminal",Co)
-  ui = UI:new(win)
+  local Ui = ui_sup.start_link(Li)
+  
+  function runFor( nTime )
+    local timer = os.startTimer( nTime or 0 )
+    while true do
+      local event = {os.pullEvent()}
+      if event[1] and event[2] and event[1] == "timer" and event[2] == timer then
+        break
+      else
+        gen_server.cast(Li,event)
+      end
+    end
+  end
+  
 end
 
 function test_init_lock()
@@ -65,23 +73,60 @@ function test_open_close()
   local State = gen_server.call(lock,{"observer"})
   --Open closed door
   local res = Airlock.open(lock,"inner")
-  luaunit.assertEquals(res,"opened")
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner:isOut())
+  runFor(2)
+  res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"opening")
+  runFor(2)
   --Open already open door
   res = Airlock.open(lock,"inner")
   luaunit.assertEquals(res,"open")
   luaunit.assertTrue(State.doors.inner:isOut())
-  --Open closed door when other is open
-  res = Airlock.open(lock,"outer")
-  luaunit.assertEquals(res,"cycling")
-  luaunit.assertFalse(State.doors.inner:isOut())
-  luaunit.assertTrue(State.doors.outer:isOut())
   --Close already open door
-  res = Airlock.close(lock,"outer")
-  luaunit.assertEquals(res,"closed")
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
   luaunit.assertFalse(State.doors.outer:isOut())
+  runFor(2)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
+  runFor(2)
   --Close already closed door
-  res = Airlock.close(lock,"outer")
-  luaunit.assertEquals(res,"not_open")
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closed")
+  --Close opening door
+  res = Airlock.open(lock,"inner")
+  runFor(1)
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner.opening)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
+  luaunit.assertFalse(State.doors.inner.opening)
+  luaunit.assertTrue(State.doors.inner.closing)
+  runFor(1.5)
+  luaunit.assertFalse(State.doors.inner.closing)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closed")
+  --Open closing door
+  Airlock.open(lock,"inner")
+  runFor(4)
+  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")
+  Airlock.close(lock,"inner")
+  runFor(1)
+  luaunit.assertTrue(State.doors.inner.closing)
+  res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner.opening)
+  luaunit.assertFalse(State.doors.inner.closing)
+  runFor(1.5)
+  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")
+  
+--  --Open closed door when other is open
+--  res = Airlock.open(lock,"outer")
+--  luaunit.assertEquals(res,"cycling")
+--  runFor(5)
+--  luaunit.assertFalse(State.doors.inner:isOut())
+--  luaunit.assertTrue(State.doors.outer:isOut())
 end
 
 function tearDown_each()

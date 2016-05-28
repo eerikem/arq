@@ -27,7 +27,7 @@ end
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {pane = Panel:new(),term = term,selectables={},redraw = term.redraw}
+  local o = {type="ui",pane = Panel:new(),term = term,selectables={},redraw = term.redraw}
   o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self

@@ -1,5 +1,6 @@
-local Menu = require "ui_menu"
+local luaunit = require 'luaunit'
 
+local Menu = require "ui_menu"
 local Client = {}
 
 local threads = {}
@@ -28,16 +29,27 @@ local function toNames(list)
   return map(function(thread)return names[thread]end,list)
 end
 
+local function threadToName(thread)
+  
+end
+
 local function onThreadFocus(thread,pane)
   return function()
     pane.index[1].text = tostring(thread)
     if VM.co2names[thread] then
       pane.index[2].text = "Names: "..table.concat(VM.co2names[thread]," ")
     else pane.index[2].text = "Names: " end
+    if names[VM.parents[thread]] then
+      pane.index[3].text = "Parent: "..names[VM.parents[thread]]
+    else
+      pane.index[3].text = "Parent: Error!"
+    end
     if VM.links[thread] then 
-      pane.index[3].text = "Links: "..table.concat(toNames(VM.links[thread])," ")
-    else pane.index[3].text = "Links:" end
-    pane.index[4].text = "Resumes: "..VM.resumes[thread]
+      pane.index[4].text = "Links: "..table.concat(toNames(VM.links[thread])," ")
+    else pane.index[4].text = "Links:" end
+    if VM.resumes[thread] then
+      pane.index[5].text = "Resumes: "..VM.resumes[thread]
+    else pane.index[5].text = "Resumes: Unkown" end
   end
 end
 
@@ -55,7 +67,7 @@ function Client.observerUI(Co)
   body:setTextColor(colors.gray)
   
   local infoPanel = Panel:new()
-  local info = List.fromArray({"","","",""})
+  local info = List.fromArray({"","","","",""})
   infoPanel.width = 28
   infoPanel.height = 10
   infoPanel.xpos = 12

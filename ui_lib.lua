@@ -1,13 +1,5 @@
 local UI = {}
 
-local function exec(cmd)
-  if commands then
-    commands.execAsync(cmd)
-  else
-    VM.log("Warning: Not a command computer")
-  end
-end
-
 local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
 local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
 local errorSound = "/playsound frontierdevelopment:event.mondecline @p"

@@ -27,9 +27,10 @@ function Client:new(Co)
   ui:update()
   
   local function fun()
-    VM.spawn(function()
+    local Co = VM.spawn(function()
       Observer.observerUI("terminal") end)
     ui:update()
+    VM.log("Spawned ".. tostring(Co))
   end
   t:setOnSelect(ui,fun)
   

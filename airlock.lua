@@ -11,12 +11,14 @@ local MIDDLE = "monitor_5"
 local doors = {
   outer = Bundle:new(CABLE_SIDE,colors.lightBlue,"monitor_1"),
   inner = Bundle:new(CABLE_SIDE,colors.lime,"monitor_3")
---  outer = false,
---  inner = false
-}
+  }
+local LEFT = "outer"
+local RIGHT = "inner"
+local x,y,z = 98,79,30
+local SOUND = "/playsound frontierdevelopment:event.event_airlock_norm @a[%d,%d,%d,2]"
 
 local function initDoors(doors)
-  VM.log("Running initDoors")
+--  VM.log("Running initDoors")
   for _,door in pairs(doors) do
     door:disable()
     door.opening = false
@@ -41,10 +43,10 @@ local function doorTimer(callback)
   while true do
     local r,to = VM.receive()
     if r == "wake" then
-      VM.log("doorTimer completed")
+--      VM.log("doorTimer completed")
       return callback()
-    elseif r == "stop" then
-      VM.log("Stopped doorTimer")
+    elseif r == "stop_timer" then
+--      VM.log("Stopped doorTimer")
       if to then
         if reverse then
           VM.send(to,"start",DOOR_DELAY - (os.clock() - time),false)
@@ -52,7 +54,8 @@ local function doorTimer(callback)
           VM.send(to,"start",os.clock() - time,true)
         end
       end
-      return callback()
+      local canceled = true
+      return callback(canceled)
     else
       error("doorTimer received bad msg")
     end
@@ -66,7 +69,7 @@ local function open(door)
     doors[door].opening = false end
   local newTimer = VM.spawn(function()doorTimer(fun)end)
   if doors[door].closing then
-    VM.send(doors[door].timer,"stop",newTimer)
+    VM.send(doors[door].timer,"stop_timer",newTimer)
     doors[door].timer = newTimer
   else
     doors[door].timer = newTimer
@@ -74,15 +77,29 @@ local function open(door)
   end
 end
 
-local function close(door)
+local function close(door,from,ref)
   doors[door]:disable()
   doors[door].closing = true
-  local fun = function()
-    doors[door].closing = false end
+  local fun = function(canceled)
+    doors[door].closing = false
+    if ref then
+      if canceled then
+        gen_server.cast(from,{"canceled",ref})
+      else
+        gen_server.cast(from,{"closed",ref})
+      end
+    else
+      if canceled then
+        gen_server.cast(from,{"canceled"})
+      else
+        gen_server.cast(from,{"closed"})
+      end
+    end
+  end
   
   local newTimer = VM.spawn(function()doorTimer(fun)end)
   if doors[door].opening then
-    VM.send(doors[door].timer,"stop",newTimer)
+    VM.send(doors[door].timer,"stop_timer",newTimer)
     doors[door].timer = newTimer
   else
     doors[door].timer = newTimer
@@ -113,12 +130,26 @@ function Airlock.start()
   VM.register("airlock",Co)
 end
 
+function Airlock.abort(Co)
+  return gen_server.call(Co,{"abort"})
+end
+
 ---------------
 --Server & UI--
 ---------------
 
 function Airlock.start_link()
   return gen_server.start_link(Airlock,{},{})
+end
+
+local function getDirection(door)
+  if door == LEFT then
+    return "left"
+  elseif door == RIGHT then
+    return "right"
+  else
+    error("Bad door: "..door,2)
+  end
 end
 
 local function outerUI(Co,door)
@@ -179,11 +210,11 @@ local function outerUI(Co,door)
   
   local ticker = nil
   
-  local function cycle()
+  local function cycle(_,door)
     --Avoid double cycling by checking for ticker
     if not ticker then
       enable(cycling)
-      ticker = VM.spawn(tick)
+      ticker = VM.spawn(function()tick(getDirection(door))end)
     end
   end
 
@@ -199,7 +230,7 @@ local function outerUI(Co,door)
           enable(close)
         elseif res == "cycling" then
           ui:ping()
-          cycle()
+          cycle(nil,door)
         end
       elseif reactor.parent == close then
         local res = Airlock.close(Co,door)
@@ -216,12 +247,12 @@ local function outerUI(Co,door)
   
   local function stopTicker()
     if ticker then
-      VM.log("Sending stop to ticker")
+--      VM.log("Sending stop to ticker")
       VM.send(ticker,"stop")
+      ticker = nil
     else
       error("No ticker to stop!",2)
     end
-    ticker = nil
   end
   
   local function openHandler()
@@ -229,9 +260,13 @@ local function outerUI(Co,door)
     enable(close)
   end
   
-  local function closeHandler()
-    stopTicker()
-    enable(open)
+  local function closeHandler(_,queuedCycle)
+    if queuedCycle then
+      enable(open)
+    else
+      stopTicker()
+      enable(open)
+    end
   end
   
   open:setOnSelect(ui,handler(VM.running(),open.reactor))
@@ -260,6 +295,8 @@ local function innerUI(Co)
   local title = Graphic:new("AIRLOCK")
   local body = Panel:new()
   local button = Graphic:new("CYCLE")
+  local closing = Graphic:new("CLOSING")
+  local abort = Graphic:new(" ABORT ")
   local cycling = Graphic:new("CYCLING")
   local cycler = Graphic:new("       ")
   local cycling = Graphic:new("CYCLING")
@@ -268,14 +305,19 @@ local function innerUI(Co)
   button.xpos = 2
   button.ypos = 2
   cycling.ypos = 2
+  closing.ypos = 2
+  abort.xpos = 1
+  abort.ypos = 0
   ui:add(title)
   body:add(button)
   body:add(cycler)
   ui:add(body)
   
   --TODO Remove Duplicate Hacks
-  local function enable(button2)
-    local button1 = body.index[1]
+  local function enable(button2,i)
+    if not i then i = 1 end
+    if i > table.maxn(body.index) then error("Bad index",2) end
+    local button1 = body.index[i]
     body:replace(button1,button2)
     button1.reactor:stop()
     button2.reactor:start()
@@ -310,11 +352,30 @@ local function innerUI(Co)
     end
   end
   
-  local function cycle()
+  local function cycle(_,door)
     --Avoid double cycling by checking for ticker
     if not ticker then
+--      ui:remove(abort)
       enable(cycling)
-      ticker = VM.spawn(tick)
+      ticker = VM.spawn(function()tick(getDirection(door))end)
+    end
+  end
+  
+  local function showAbort()
+--    ui:add(abort)
+    enable(closing)
+  end
+  
+  local function abortHandler(Co)
+    return function()
+      local res = Airlock.abort(Co)
+      if res == "opening" then
+        ui:tap()
+        ui:remove(abort)
+        enable(button)
+      else
+        ui:beep()
+      end
     end
   end
   
@@ -322,6 +383,9 @@ local function innerUI(Co)
     return function()
       local res = Airlock.cycle(Co)
       if res == "cycling" then
+        ui:ping()
+      elseif res == "closing" then
+        enable(closing)
         ui:ping()
       else
         ui:beep()
@@ -331,7 +395,7 @@ local function innerUI(Co)
   
   local function stopTicker()
     if ticker then
-      VM.log("Sending stop to ticker "..tostring(ticker))
+--      VM.log("Sending stop to ticker "..tostring(ticker))
       VM.send(ticker,"stop")
     else
       error("No ticker to stop!",2)
@@ -339,13 +403,19 @@ local function innerUI(Co)
     ticker = nil
   end
   
-  local function cycleHandler()
-    stopTicker()
-    enable(button)
+  local function cycleHandler(_,canceled)
+    if canceled then
+      enable(button)
+    else
+      stopTicker()
+      enable(button)
+    end
   end
   
   button:setOnSelect(ui,handler(VM.running()))
+--  abort:setOnSelect(ui,abortHandler(VM.running()))
   ui.reactor:register("cycle",cycle)
+  ui.reactor:register("closing",showAbort)
   ui.reactor:register("stop_cycle",cycleHandler)
   
   local function bright()
@@ -355,6 +425,9 @@ local function innerUI(Co)
     body:setBackgroundColor(colors.gray)
     cycling:setTextColor(colors.white)
     cycler:setTextColor(colors.orange)
+    closing:setTextColor(colors.white)
+    abort:setTextColor(colors.lightGray)
+    abort:setBackgroundColor(colors.gray)
   end
   
   bright()
@@ -387,11 +460,22 @@ end
 
 local function cycle(State,door,other)
   VM.log("Cycling airlock")
-  close(other)
-  State.uis[other].reactor:handleEvent("cycle")
-  State.inner.reactor:handleEvent("cycle")
+  local closing = State.doors[other].closing
+  if State.doors[other]:isOut() or closing then
+    if not closing then
+      State.uis[other].reactor:handleEvent("close","queue_cycle")
+    end
+    local ref = VM.ref()
+    close(other,VM.running(),ref)
+    State.inner.reactor:handleEvent("closing")
+    State.cycleQueued = ref
+    return
+  end
+  State.uis[other].reactor:handleEvent("cycle",door)
+  State.inner.reactor:handleEvent("cycle",door)
   --TODO Remove calling door to cycle? What happens if double button tap?
-  State.uis[door].reactor:handleEvent("cycle")
+  State.uis[door].reactor:handleEvent("cycle",door)
+  exec(SOUND,x,y,z)
   EVE.sleep(DELAY)
   State.inner.reactor:handleEvent("stop_cycle")
   State.uis[other].reactor:handleEvent("close")
@@ -416,7 +500,7 @@ function Airlock.handle_call(Request,From,State)
         gen_server.reply(From,"open")
       end
     else
-      if o:isOut() then
+      if o:isOut() or o.closing then
         gen_server.reply(From,"cycling")
         --cycle the airlock!
         cycle(State,door,other)
@@ -430,7 +514,7 @@ function Airlock.handle_call(Request,From,State)
     local door = Request[2]
     local d = State.doors[door]
     if d:isOut() then
-        close(door)
+        close(door,VM.running())
         gen_server.reply(From,"closing")
     elseif d.closing then
       gen_server.reply(From,"closing")
@@ -438,16 +522,46 @@ function Airlock.handle_call(Request,From,State)
       gen_server.reply(From,"closed")
     end
   elseif event == "cycle" then
-    gen_server.reply(From,"cycling")
-    local other = otherDoor(State.doors,State.last)
-    State.uis[other].reactor:handleEvent("cycle")
-    cycle(State,other,State.last)
+    if State.doors[State.last].closing then
+      gen_server.reply(From,"closing")
+--      VM.log("Queueing cycle")
+      State.cycleQueued = true
+    else
+      gen_server.reply(From,"cycling")
+      local other = otherDoor(State.doors,State.last)
+      State.uis[other].reactor:handleEvent("cycle",other)
+      cycle(State,other,State.last)
+    end
+  elseif event == "abort" then
+    gen_server.reply(From,"opening")
+    open(State.last)
   end
   return State
 end
 
 function Airlock.handle_cast(Request,State)
-  VM.log("Received "..Request)
+  if Request[1]=="closed" then
+    local event, Ref = unpack(Request)
+--    VM.log("received closed event")
+    if State.cycleQueued then
+      if not Ref or State.cycleQueued == Ref then
+        State.cycleQueued = nil
+        local other = otherDoor(State.doors,State.last)
+        cycle(State,other,State.last)
+      end
+    end
+  elseif Request[1]=="canceled" then
+    local _, Ref = unpack(Request)
+--    VM.log("received canceled timer")
+    if State.cycleQueued and State.cycleQueued == Ref then
+      State.cycleQueued = nil
+      local other = otherDoor(State.doors,State.last)
+      State.uis[other].reactor:handleEvent("close")
+      State.inner.reactor:handleEvent("stop_cycle",true)
+    end
+  else
+    VM.log("Received "..Request)
+  end
   return State
 end
 

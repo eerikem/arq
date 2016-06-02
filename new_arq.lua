@@ -11,7 +11,7 @@ function map(func, tbl)
          newtbl[i] = func(v)
      end
      return newtbl
- end
+end
 
 print = function() end
 --write = function() end
@@ -29,6 +29,15 @@ Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
 Group = require "group"
+
+function exec(cmd,...)
+  if commands then
+    commands.execAsync(string.format(cmd,unpack(arg)))
+  else
+    VM.log("Warning: Not a command computer")
+  end
+end
+
 local Attack = require "attack"
 local Elevator = require "elevator"
 local Teleport = require "teleport"

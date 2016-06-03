@@ -48,6 +48,12 @@ end
 
 function Server.handle_call(Request,From,State)
   local event = Request[1]
+  if event == "timer" then
+    local _,time = unpack(Request)
+    local timer = os.startTimer(time)
+    gen_server.reply(From,timer)
+    State.timers[timer]=From[1]
+  end
   return State
 end
 
@@ -68,7 +74,7 @@ function Server.handle_cast(Request,State)
     local timer = Request[2]
     if State.timers[timer] then
 --      VM.log("sending wake")
-      VM.send(State.timers[timer],"wake")
+      VM.send(State.timers[timer],"wake",timer)
       State.timers[timer]=nil
     end
   elseif event == "peripheral_detach" then
@@ -120,6 +126,11 @@ function Server.sleep( time )
     local event = VM.receive()
 --    VM.log(" received something")
   until event == "wake" or event == "stop"
+end
+
+function Server.timer(time)
+  if not time then return end
+  return gen_server.call("events",{"timer",time},"infinite")
 end
 
 function Server.subscribe(event,Co)

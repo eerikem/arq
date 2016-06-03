@@ -43,6 +43,7 @@ local Elevator = require "elevator"
 local Teleport = require "teleport"
 local Airlock = require "airlock"
 local Observer = require "observer"
+local Door = require "door"
 
 VM.init()
 
@@ -57,9 +58,10 @@ VM.log = write
 ui_sup.app("terminal")
 
 --Attack.start()
-Teleport.start()
+--Teleport.start()
 --Elevator.start()
-Airlock.start()
+--Airlock.start()
+Door.start()
 
 while true do
   --VM.flush()

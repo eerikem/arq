@@ -1,6 +1,4 @@
 
---
---VM = require 'vm'
 local gen_server = require 'gen_server'
 --UI = require 'ui'
 

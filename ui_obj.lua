@@ -68,7 +68,10 @@ function proto:color(out)
   if self.background then
     out.setBackgroundColor(self.background)
   elseif self.proto.background then
+    if DEBUG then VM.log("Option 2: "..self.proto.background)stop()end
     out.setBackgroundColor(self.proto.background)
+  elseif DEBUG then
+    VM.log("Option 3: "..out.getBackgroundColor())
   end
   if self.textColor then
     out.setTextColor(self.textColor)
@@ -183,12 +186,24 @@ end
 function proto:redraw(ui,noscroll,focus)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
+  if DEBUG then
+    VM.log(string.format("At %d, %d",ui.term.getCursorPos()))
+    VM.log(self.proto.id.." redraw before coloring text: "..color.." back: "..back)  
+  end
   if focus then
     self:colorFocus(ui.term)
   else
     self:color(ui.term)
   end
+  if DEBUG then
+    VM.log(self.proto.id.." redraw after coloring: "..ui.term.getTextColor().." back: "..ui.term.getBackgroundColor())
+--  ui.term.setBackgroundColor(colors.blue)
+    ui.term.write(ui.term.getBackgroundColor())
+  end
   local counter = self:write(ui,noscroll)
+  if DEBUG then
+    VM.log(self.proto.id.." written with text: "..ui.term.getTextColor().." back: "..ui.term.getBackgroundColor())
+  end
   self.height = counter + 1
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)
@@ -231,7 +246,11 @@ function Panel:getSize(width)
   for _,V in ipairs(self.index) do
     local w,h = V:getSize(width-xIndent)
     if w > maxWidth then maxWidth = w end
-    absHeight = absHeight + h
+    if self.layout == "static" then
+      if h > absHeight then absHeight = h end
+    else
+      absHeight = absHeight + h
+    end
   end
   return maxWidth + xIndent, absHeight + yIndent
 end
@@ -306,7 +325,7 @@ end
 
 Panel.setCursor = proto.setCursor
 
-function Panel:redraw(ui,noscroll)
+function Panel:redraw(ui,noscroll,focus)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
   self:applyColors(ui)
@@ -320,9 +339,12 @@ function Panel:redraw(ui,noscroll)
       h = self.staticHeight end
 --    VM.log("Panel redraw max height: "..self.height)
     local first = true
-    for n=1, h do
+    for n=1, h - (self.ypos - 1) do
       if first then first = false
       else incCursorPos(ui.term,x) end
+      if DEBUG then
+        VM.log(string.format("Drawing %d spaces from %d, %d",w,ui.term.getCursorPos()))
+        end
       for m=1, w do
         ui.term.write(" ")
       end
@@ -337,7 +359,7 @@ function Panel:redraw(ui,noscroll)
       if first then first = false
       else incCursorPos(ui.term,x)
       lineCounter = lineCounter + 1 end
-      lineCounter = lineCounter + self:drawItem(ui,V,noscroll)
+      lineCounter = lineCounter + self:drawItem(ui,V,noscroll,focus)
     end
     self.height = lineCounter + self.ypos
     ui.term.setTextColor(color)
@@ -350,12 +372,13 @@ function Panel:redraw(ui,noscroll)
     local maxWidth = 0
     local width,height = ui.term.getSize()
     for _,V in ipairs(self.index) do
-      self:drawItem(ui,V,noscroll)
+      self:drawItem(ui,V,noscroll,focus)
       local w,h = V:getSize(width - (x - 1))
       if w > maxWidth then maxWidth = w end
       if h > maxHeight then maxHeight = h end
       ui.term.setCursorPos(x,y)
     end
+    ui.term.setCursorPos(x,y + maxHeight - 1)
     self.height = maxHeight + self.ypos - 1
     if type(self.width) ~= "string" then
       self.width = maxWidth + self.xpos - 1
@@ -372,8 +395,12 @@ function Panel:redraw(ui,noscroll)
   end
 end
 
-function Panel:drawItem(ui,obj,noscroll)
-  return obj:redraw(ui,noscroll)
+function Panel:drawFocus(ui,noscroll)
+  return self:redraw(ui,noscroll,true)
+end
+
+function Panel:drawItem(ui,obj,noscroll,focus)
+  return obj:redraw(ui,noscroll,focus)
 end
 
 function Panel:setHeight(height)
@@ -388,12 +415,21 @@ function Panel:setContent(...)
 end
 
 function Panel:remove(c)
---TODO remove metatable?
 --TODO shift index values in self.content?!?
   if self.content[c] then
     local pos = self.content[c]
     table.remove(self.index,pos)
     self.content[c]=nil
+    for K,V in pairs(self.content) do
+      if V > pos then
+        self.content[K] = V - 1
+      end
+    end
+    --TODO remove metatable!?
+    if c.deleteProto then
+--      c.deleteProto()
+    end
+    
     return pos
   end
   return nil
@@ -419,19 +455,31 @@ function Panel:replace(c,_c)
 end
 
 function Panel:applyProto(c)
+  local deletionList = {}
   if not c.proto then
     c.proto = self.proto
+    table.insert(deletionList,"proto")
     if not c.redraw then
-      c.redraw = c.proto.redraw end
+      c.redraw = c.proto.redraw
+      table.insert(deletionList,"redraw") end
     if not c.drawFocus then
-      c.drawFocus = c.proto.drawFocus end
+      c.drawFocus = c.proto.drawFocus
+      table.insert(deletionList,"drawFocus") end
     if not c.drawFromLine then
-      c.drawFromLine = c.proto.drawFromLine end
+      c.drawFromLine = c.proto.drawFromLine
+      table.insert(deletionList,"drawFocus") end
     c.color = c.proto.color
     c.colorFocus = c.proto.colorFocus
     c.setCursor = c.proto.setCursor
     if not c.write then
-      c.write = c.proto.write end
+      c.write = c.proto.write
+      table.insert(deletionList,"write") end
+    c.deleteProto = function()
+      for _,V in ipairs(deletionList) do
+        c[V] = nil
+      end
+      c.deleteProto = nil
+    end
   end
 end
 

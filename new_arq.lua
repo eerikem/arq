@@ -44,6 +44,7 @@ local Teleport = require "teleport"
 local Airlock = require "airlock"
 local Observer = require "observer"
 local Door = require "door"
+local Manager = require "door_manager"
 
 VM.init()
 
@@ -61,7 +62,10 @@ ui_sup.app("terminal")
 --Teleport.start()
 --Elevator.start()
 --Airlock.start()
-Door.start()
+local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_1","Room 51"),
+Door.startMonitorDoor(colors.yellow,"monitor_3","monitor_5","ADMIN"),
+Door.startFakeDoor("monitor_7","DENIED")}
+Manager.start(doors)
 
 while true do
   --VM.flush()

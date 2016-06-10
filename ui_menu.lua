@@ -43,20 +43,28 @@ function Menu:redraw(ui,noscroll)
   local color = ui.term.getTextColor()--TODO a better solution to Color bleeding.
   local back = ui.term.getBackgroundColor()
   self:applyColors(ui)
+  local x,y = self:setCursor(ui)
   if self.width then
-    local X,Y = ui.term.getCursorPos()
     local w = self.width
     if w == "max" then
       w = ui.term.getSize() end
-    for n=1, self.height + self.ypos - 1 do
+    local h = self.height
+    if self.staticHeight then
+      h = self.staticHeight end
+--    VM.log("Panel redraw max height: "..self.height)
+    local first = true
+    for n=1, h - (self.ypos - 1) do
+      if first then first = false
+      else incCursorPos(ui.term,x) end
+      if DEBUG then
+        VM.log(string.format("Drawing %d spaces from %d, %d",w,ui.term.getCursorPos()))
+        end
       for m=1, w do
         ui.term.write(" ")
       end
-      incCursorPos(ui.term,X)
     end
-    ui.term.setCursorPos(X,Y)
+    ui.term.setCursorPos(x,y)
   end
-  local x = self:setCursor(ui)
   
   local first = true
   local counter = 0
@@ -74,8 +82,10 @@ function Menu:redraw(ui,noscroll)
 --    write("count = "..counter)sleep(1)
   end
   self.width = maxWidth
-  self.height = counter + 1
-  return counter + self.ypos - 1
+  self.height = counter + self.ypos
+  ui.term.setTextColor(color)
+  ui.term.setBackgroundColor(back)
+  return counter
 end
 
 function Menu:inc()

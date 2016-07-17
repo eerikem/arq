@@ -1,3 +1,6 @@
+local Reactor = require 'Reactor'
+local Panel = require 'ui_obj'
+
 local UI = {}
 
 local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"

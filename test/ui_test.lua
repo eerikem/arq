@@ -69,7 +69,6 @@ function setup_each()
       end
     end
   end
-  
 end
 
 function test_new_Graphic()

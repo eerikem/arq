@@ -16,6 +16,14 @@ function writeConsole(str)
   term.redirect(old)
 end
 
+function exec(cmd,...)
+  if commands then
+    commands.execAsync(string.format(cmd,unpack(arg)))
+  else
+    VM.log("Warning: Not a command computer")
+  end
+end
+
 --colors = {white = "white",yellow = "yellow"}
 
 --local sleep = function() end
@@ -51,6 +59,14 @@ function setup_each()
     end
   end
   
+  function stop()
+    while true do
+      local event = {os.pullEvent()}
+      if event[1] and event[2] and event[1] =="key"and event[2]== keys.space then
+        break
+      end
+    end
+  end
 end
 
 function test_init_lock()
@@ -68,59 +84,59 @@ function test_ui()
   ui:update()
 end
 
---function test_open_close()
---  local lock = Airlock.start_link()
---  local State = gen_server.call(lock,{"observer"})
---  --Open closed door
---  local res = Airlock.open(lock,"inner")
---  luaunit.assertEquals(res,"opening")
---  luaunit.assertTrue(State.doors.inner:isOut())
---  runFor(2)
---  res = Airlock.open(lock,"inner")
---  luaunit.assertEquals(res,"opening")
---  runFor(2)
---  --Open already open door
---  res = Airlock.open(lock,"inner")
---  luaunit.assertEquals(res,"open")
---  luaunit.assertTrue(State.doors.inner:isOut())
---  --Close already open door
---  res = Airlock.close(lock,"inner")
---  luaunit.assertEquals(res,"closing")
---  luaunit.assertFalse(State.doors.outer:isOut())
---  runFor(2)
---  res = Airlock.close(lock,"inner")
---  luaunit.assertEquals(res,"closing")
---  runFor(2)
---  --Close already closed door
---  res = Airlock.close(lock,"inner")
---  luaunit.assertEquals(res,"closed")
---  --Close opening door
---  res = Airlock.open(lock,"inner")
---  runFor(1)
---  luaunit.assertEquals(res,"opening")
---  luaunit.assertTrue(State.doors.inner.opening)
---  res = Airlock.close(lock,"inner")
---  luaunit.assertEquals(res,"closing")
---  luaunit.assertFalse(State.doors.inner.opening)
---  luaunit.assertTrue(State.doors.inner.closing)
---  runFor(1.5)
---  luaunit.assertFalse(State.doors.inner.closing)
---  res = Airlock.close(lock,"inner")
---  luaunit.assertEquals(res,"closed")
---  --Open closing door
---  Airlock.open(lock,"inner")
---  runFor(4)
---  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")
---  Airlock.close(lock,"inner")
---  runFor(1)
---  luaunit.assertTrue(State.doors.inner.closing)
---  res = Airlock.open(lock,"inner")
---  luaunit.assertEquals(res,"opening")
---  luaunit.assertTrue(State.doors.inner.opening)
---  luaunit.assertFalse(State.doors.inner.closing)
---  runFor(1.5)
---  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")  
---end
+function test_open_close()
+  local lock = Airlock.start_link()
+  local State = gen_server.call(lock,{"observer"})
+  --Open closed door
+  local res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner:isOut())
+  runFor(2)
+  res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"opening")
+  runFor(2)
+  --Open already open door
+  res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"open")
+  luaunit.assertTrue(State.doors.inner:isOut())
+  --Close already open door
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
+  luaunit.assertFalse(State.doors.outer:isOut())
+  runFor(2)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
+  runFor(2)
+  --Close already closed door
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closed")
+  --Close opening door
+  res = Airlock.open(lock,"inner")
+  runFor(1)
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner.opening)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closing")
+  luaunit.assertFalse(State.doors.inner.opening)
+  luaunit.assertTrue(State.doors.inner.closing)
+  runFor(1.5)
+  luaunit.assertFalse(State.doors.inner.closing)
+  res = Airlock.close(lock,"inner")
+  luaunit.assertEquals(res,"closed")
+  --Open closing door
+  Airlock.open(lock,"inner")
+  runFor(4)
+  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")
+  Airlock.close(lock,"inner")
+  runFor(1)
+  luaunit.assertTrue(State.doors.inner.closing)
+  res = Airlock.open(lock,"inner")
+  luaunit.assertEquals(res,"opening")
+  luaunit.assertTrue(State.doors.inner.opening)
+  luaunit.assertFalse(State.doors.inner.closing)
+  runFor(1.5)
+  luaunit.assertEquals(Airlock.open(lock,"inner"),"open")  
+end
 
 function test_cycle()
   local lock = Airlock.start_link()

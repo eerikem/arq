@@ -1,8 +1,9 @@
 
 local gen_server = require 'gen_server'
---UI = require 'ui'
-
+local UI = require 'ui_lib'
+local Reactor = require 'reactor'
 local Prod = require 'producer'
+local Graphic = require 'graphic'
 local Server = {}
 
 function Server.start_link(term,termName)
@@ -50,7 +51,7 @@ local function handleMouse(Req,State)
 end
 
 local function handleTouch(Req,State)
-  local _,x,y = unpack(Req)
+  local event,x,y = unpack(Req)
   VM.log(State.ui.name.." touched at "..x.." "..y)
   local ui = getTerm(State,x,y)
   if ui then ui.reactor:handleEvent(unpack(Req))

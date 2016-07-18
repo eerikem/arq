@@ -29,6 +29,7 @@ Graphic = require "graphic"
 Panel, List = require "ui_obj"
 Menu = require "ui_menu"
 Group = require "group"
+local arqMenu = require 'arqMenu'
 
 function exec(cmd,...)
   if commands then
@@ -49,10 +50,10 @@ local Manager = require "door_manager"
 VM.init()
 
 
-local Li = EVE.start_link()
+local _,Li = EVE.start_link()
 --local Ui = EVE.subscriber(Li,ui_sup)
 
-local Ui = ui_sup.start_link(Li)
+local _,Ui = ui_sup.start_link(Li)
 local write = ui_sup.statusWindow("terminal")
 VM.log = write
 
@@ -61,11 +62,13 @@ ui_sup.app("terminal")
 --Attack.start()
 --Teleport.start()
 --Elevator.start()
-Airlock.start()
+--Airlock.start()
 --local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
 --Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
 --Door.startFakeDoor("monitor_3","DENIED")}
 --Manager.start(doors)
+arqMenu.start()
+arqMenu.crash()
 
 while true do
   --VM.flush()

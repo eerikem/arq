@@ -182,7 +182,7 @@ function Elevator.init()
   local ui2, call = callPanelUI("monitor_5",3)
   local ui3, call2 = callPanelUI("monitor_3",1)
   cables.white:disable()
-  return {cables = cables,
+  return true, {cables = cables,
           elevators = {{callPanels = {{ui = ui2,button = call},
                                      {ui = ui3,button = call2}},
                        floorPanels = {{ui = ui,floors = floors,buttons = buttons}},

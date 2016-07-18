@@ -1,4 +1,4 @@
-require = function(...)
+local require = function(...)
   for _,file in ipairs(arg) do
     if fs.exists(file..".lua") then
       return dofile(file..".lua")
@@ -15,3 +15,5 @@ require = function(...)
     end
   end
 end
+
+return require

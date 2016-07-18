@@ -5,7 +5,7 @@ local Menu = require "ui_menu"
 local Group = require "group"
 
 local CABLE_SIDE = "back"
-local MONITOR = "monitor_0"
+local MONITOR = "monitor_5"
 local cables = {
   override = Bundle:new(CABLE_SIDE,colors.yellow,"Override"),
   power = Bundle:new(CABLE_SIDE,colors.white,"Power"),
@@ -189,8 +189,11 @@ end
 local Server = {}
 
 function Server.start()
-  local Co = gen_server.start_link(Server,{},{},NAME)
-  EVE.subscribe("redstone",Co)
+  Server.start_link()
+end
+
+function Server.start_link()
+  return gen_server.start_link(Server,{},{},NAME)
 end
 
 local function enableButton(State)
@@ -202,11 +205,12 @@ function Server.init()
   local ui,button,status,doorButton = attackUI()
   local State = {ui = ui,button = button,enabled = false,status=status,cables=cables,open=false,door=doorButton}
   initCables(State.cables)
+  EVE.subscribe("redstone",VM.running())
   if not State.cables.override:isOn() then
     enableButton(State)
     ui:update()
   end
-  return State
+  return true, State
 end
 
 function Server.handle_call(Request,From,State)

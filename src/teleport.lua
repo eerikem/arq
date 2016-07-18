@@ -40,7 +40,7 @@ end
 
 function Tele.init()
   local ui = teleUI("monitor_1")
-  return {ui =ui}
+  return true, {ui =ui}
 end
 
 function Tele.handle_call(Request,From,State)

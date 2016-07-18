@@ -11,7 +11,7 @@ function Server.start(doors)
   if not doors then
     error("Door manager requires doors",1)
   end
-  local Co = Server.start_link(doors)
+  local ok, Co = Server.start_link(doors)
   for _,door in ipairs(doors) do
     Server.add(Co,door)
   end
@@ -146,7 +146,7 @@ end
 function Server.init()
   local ui,menu,buttons = managerUI("terminal")
   local State = {ui = ui,menu = menu,buttons=buttons,doors={}}
-  return State
+  return true, State
 end
 
 local changed = false

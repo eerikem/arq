@@ -44,7 +44,7 @@ function Server.init()
   reactor:register("mouse_click",clickHandler(o))
   reactor:register("mouse_up",clickHandler(o))
   reactor:register("mouse_drag",clickHandler(o))
-  return o
+  return true, o
 end
 
 function Server.handle_call(Request,From,State)
@@ -136,11 +136,14 @@ end
 
 function Server.subscribe(event,Co)
   local Co = Co or VM.running()
+  if not VM.coroutines[Co] then error("badarg Co",2) end
   gen_server.cast("events",{"subscribe",Co,event})
 end
 
 function Server.subscriber(Co,Module)
-  return Module.start_link(Co)
+  local ok, co = Module.start_link(Co)
+  if ok ~= true or not co then error("expected: ok, Co",2) end
+  return co
 end
 
 

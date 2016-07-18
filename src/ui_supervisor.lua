@@ -10,7 +10,8 @@ function Server.start_link(Sup)
 end
 
 local function link_ui(term,name)
-  return ui_server.start_link(term,name)
+  local ok, co = ui_server.start_link(term,name)
+  return co
 end
 
 local function toTerminal(...) gen_server.cast("terminal",{...}) end
@@ -57,7 +58,7 @@ function Server.init(eventCo)
     reactor:register(event,handler)
   end
   o.reactor = reactor
-  return o
+  return true, o
 end
 
 local getNames = function(State)

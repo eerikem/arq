@@ -36,7 +36,7 @@ function Door.start()
     inner = "monitor_5"
   }
   
-  local Co = Door.start_link(properties)
+  local ok, Co = Door.start_link(properties)
   VM.log("Started Door "..tostring(Co))
   if properties.use_detector then
     EVE.subscribe("redstone",Co)
@@ -56,7 +56,7 @@ function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_tit
     detector = Bundle:new(CABLE_SIDE,detectorCableColor,"detector"),
     outer = monitor
   }
-  local Co = Door.start_link(properties)
+  local ok, Co = Door.start_link(properties)
   VM.log("Started Detector Door "..tostring(Co))
   EVE.subscribe("redstone",Co)
   return Co
@@ -74,7 +74,7 @@ function Door.startMonitorDoor(doorCableColor,innerMonitor,outerMonitor,ui_title
     inner = innerMonitor,
     outer = outerMonitor
   }
-  local Co = Door.start_link(properties)
+  local ok, Co = Door.start_link(properties)
   VM.log("Started Monitor Door "..tostring(Co))
   return Co
 end
@@ -88,7 +88,7 @@ function Door.startFakeDoor(monitor,ui_title)
     outer = monitor,
     locked = true
   }
-  local Co = Door.start_link(properties)
+  local ok, Co = Door.start_link(properties)
   VM.log("Started Fake Door "..tostring(Co))
   return Co
 end
@@ -293,7 +293,7 @@ function Door.init(props)
   end
   
   initDoor(State)
-  return State
+  return true, State
 end
 
 function Door.handle_call(Request,From,State)

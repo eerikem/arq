@@ -126,8 +126,9 @@ function Airlock.cycle(Co)
 end
 
 function Airlock.start()
-  local Co = Airlock.start_link()
+  local ok, Co = Airlock.start_link()
   VM.register("airlock",Co)
+  return Co
 end
 
 function Airlock.abort(Co)
@@ -449,7 +450,7 @@ function Airlock.init()
   end
   local inner = innerUI(MIDDLE)
   local State = {doors = doors,cycling = false,uis = uis,inner = inner,last = last}
-  return State
+  return true, State
 end
 
 local function otherDoor(doors,door)

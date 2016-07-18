@@ -71,12 +71,13 @@ function Bar:new(Co,height)
   o.reactor:register("message",msgHandler(o))
   ui:register(o,"scroll")
   --TODO integrate into supervision tree?
-  o.Co = gen_server.start_link(Bar,{o},{})
+  local ok, Co = gen_server.start_link(Bar,{o},{})
+  o.Co = Co
   return o
 end
 
 function Bar.init(bar)
-  return bar
+  return true, bar
 end
 
 function Bar.handle_call(Request,From,State)

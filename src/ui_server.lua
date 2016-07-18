@@ -107,7 +107,11 @@ local UI_Events = {
     end,
   key_up = function(Req,State)
     local _,keycode = unpack(Req)
-    VM.log(keys.getName( keycode ).." up at UI_Server")
+    if not keys.getName( keycode ) then
+      VM.log(keycode.." up at UI_Server")
+    else
+      VM.log(keys.getName( keycode ).." up at UI_Server")
+    end
     return State 
     end,
   paste = function(Req,State)
@@ -153,7 +157,7 @@ function Server.init(term,name)
     o.reactor:register(event,handler)
   end
   
-  return o
+  return true, o
 end
 
 local function newWindow(State,Co,w,h)

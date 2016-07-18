@@ -44,8 +44,8 @@ Airlock = require 'airlock'
 
 function setup_each()
   VM.init()
-  local Li = EVE.start_link()
-  local Ui = ui_sup.start_link(Li)
+  local _,Li = EVE.start_link()
+  local _,Ui = ui_sup.start_link(Li)
   
   function runFor( nTime )
     local timer = os.startTimer( nTime or 0 )
@@ -70,7 +70,7 @@ function setup_each()
 end
 
 function test_init_lock()
-  local lock = Airlock.start_link()
+  local lock = Airlock.start()
   luaunit.assertEquals(type(lock),"thread")
   local State = gen_server.call(lock,{"observer"})
   luaunit.assertFalse(State.doors.inner:isOut())
@@ -85,7 +85,7 @@ function test_ui()
 end
 
 function test_open_close()
-  local lock = Airlock.start_link()
+  local lock = Airlock.start()
   local State = gen_server.call(lock,{"observer"})
   --Open closed door
   local res = Airlock.open(lock,"inner")
@@ -139,7 +139,7 @@ function test_open_close()
 end
 
 function test_cycle()
-  local lock = Airlock.start_link()
+  local lock = Airlock.start()
   local State = gen_server.call(lock,{"observer"})
   --cycle when doors are closed
   local res = Airlock.cycle(lock)

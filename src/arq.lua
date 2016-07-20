@@ -63,10 +63,10 @@ ui_sup.app("terminal")
 --Teleport.start()
 --Elevator.start()
 --Airlock.start()
---local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
---Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
---Door.startFakeDoor("monitor_3","DENIED")}
---Manager.start(doors)
+local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
+Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
+Door.startFakeDoor("monitor_3","DENIED")}
+Manager.start(doors)
 arqMenu.start()
 arqMenu.crash()
 

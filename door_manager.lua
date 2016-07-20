@@ -44,11 +44,15 @@ function Server.start_link(doors)
 end
 
 local LOCKED = Graphic:new("locked")
+local LOCKED_OPEN = Graphic:new("locked open")
 local UNLOCKED = Graphic:new("unlocked")
 local OPENED = Graphic:new("opened")
 local CLOSED = Graphic:new("closed")
+local FAKE = Graphic:new("fake")
 
+FAKE:setTextColor(colors.lightGray)
 LOCKED:setTextColor(colors.red)
+LOCKED_OPEN:setTextColor(colors.red)
 OPENED:setTextColor(colors.white)
 CLOSED:setTextColor(colors.lightGray)
 
@@ -82,7 +86,7 @@ local function unlockHandler(manager)
 end
 
 local function managerUI(Co)
-  local ui = ui_server.newWindow(Co,20,8)
+  local ui = ui_server.newWindow(Co,22,8)
   local title = Graphic:new("Access Control")
   title.align = "center"
   title.ypos = 2
@@ -123,7 +127,9 @@ local function managerUI(Co)
   OPENED.xpos = indent
   LOCKED.xpos = indent
   CLOSED.xpos = indent
-
+  LOCKED_OPEN.xpos = indent
+  FAKE.xpos = indent
+  
   body:add(menu)
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
@@ -145,7 +151,7 @@ end
 
 function Server.init()
   local ui,menu,buttons = managerUI("terminal")
-  local State = {ui = ui,menu = menu,buttons=buttons,doors={}}
+  local State = {ui = ui,menu = menu,buttons=buttons,doors={},activeDoor=nil}
   return true, State
 end
 
@@ -161,18 +167,23 @@ local function addDoor(door,State)
   changed = true
   local title = Door.getTitle(door)
   VM.log("add door received "..title)
+  local type = Door.getType(door)
   local open,locked = Door.getState(door)
   local item = Panel:new()
   State.doors[door] = item
   item:setLayout("static")
   item:add(Graphic:new(title))
   item.reactor:register("focus",onDoorFocus(door,VM.running()))
-  if open then
-    item:add(OPENED)
-  elseif locked then
-    item:add(LOCKED)
+  if type == "fake" then
+    item:add(FAKE)
   else
-    item:add(CLOSED)
+    if open then
+      item:add(OPENED)
+    elseif locked then
+      item:add(LOCKED)
+    else
+      item:add(CLOSED)
+    end
   end
   State.menu:add(item)
   Door.subscribe(door)
@@ -185,20 +196,46 @@ local function enable(panel,button,index)
   changed = true
   old.reactor:stop()
   button.reactor:start()
+--  button:setTextColor(nil)
   panel:replace(old,button)
+end
+
+local function reenable(panel,button,index)
+  local old = panel.index[index]
+  if old ~= button then
+    old.reactor:stop()
+    panel:replace(old,button)
+  end
+  button:setTextColor(nil)
+  button.reactor:start()
+  changed = true
+end
+
+local function disable(panel,index)
+  local obj = panel.index[index]
+  changed = true
+  obj:setTextColor(colors.gray)
+  obj.reactor:stop()
 end
 
 local function updateButtonPanel(State,door)
   local doorState = State.doors[door].index[2]
-  if doorState == CLOSED then
-    enable(State.buttons,OPEN,1)
-  else
-    enable(State.buttons,CLOSE,1)
+  if doorState == FAKE then
+    reenable(State.buttons,OPEN,1)
+    reenable(State.buttons,LOCK,2)
+    disable(State.buttons,1)
+    disable(State.buttons,2)
+    return
   end
-  if doorState == LOCKED then
-    enable(State.buttons,UNLOCK,2)
+  if doorState == CLOSED or doorState == LOCKED then
+    reenable(State.buttons,OPEN,1)
   else
-    enable(State.buttons,LOCK,2)
+    reenable(State.buttons,CLOSE,1)
+  end
+  if doorState == LOCKED or doorState == LOCKED_OPEN then
+    reenable(State.buttons,UNLOCK,2)
+  else
+    reenable(State.buttons,LOCK,2)
   end
 end
 
@@ -210,10 +247,10 @@ function Server.handle_call(Request,From,State)
     State.activeDoor = door
     gen_server.reply(From,"ok")
   elseif event == "close" then
-    Door.close(State.activeDoor)
+    Door.forceClose(State.activeDoor)
     gen_server.reply(From,"ok")
   elseif event == "open" then
-    Door.open(State.activeDoor)
+    Door.forceOpen(State.activeDoor)
     gen_server.reply(From,"ok")
   elseif event == "lock" then
     Door.lock(State.activeDoor)
@@ -237,24 +274,45 @@ function Server.handle_cast(Request,State)
   if event == "add" then
     local _,door = unpack(Request)
     addDoor(door,State)
+    if not State.activeDoor then
+      State.activeDoor = door end
   elseif event == "opened" then
     local _,door = unpack(Request)
-    enable(State.doors[door],OPENED)
+    if State.doors[door].index[2]==CLOSED then
+      enable(State.doors[door],OPENED)
+    else
+      enable(State.doors[door],LOCKED_OPEN)
+    end  
     if door == State.activeDoor then
       updateButtonPanel(State,door) end
   elseif event == "closed" then
     local _,door = unpack(Request)
-    enable(State.doors[door],CLOSED)
+    local doorState = State.doors[door].index[2]
+    if doorState == OPENED then
+      enable(State.doors[door],CLOSED)
+    else
+      enable(State.doors[door],LOCKED)
+    end
     if door == State.activeDoor then
       updateButtonPanel(State,door) end
   elseif event == "locked" then
     local _,door = unpack(Request)
-    enable(State.doors[door],LOCKED)
+    local doorState = State.doors[door].index[2]
+    if doorState == CLOSED or doorState == LOCKED_OPEN then
+      enable(State.doors[door],LOCKED)
+    else
+      enable(State.doors[door],LOCKED_OPEN)
+    end
     if door == State.activeDoor then
       updateButtonPanel(State,door) end
   elseif event == "unlocked" then
     local _,door = unpack(Request)
-    enable(State.doors[door],CLOSED)
+    local doorState = State.doors[door].index[2]
+    if doorState == LOCKED then
+      enable(State.doors[door],CLOSED)
+    else
+      enable(State.doors[door],OPENED)
+    end
     if door == State.activeDoor then
       updateButtonPanel(State,door) end
   else

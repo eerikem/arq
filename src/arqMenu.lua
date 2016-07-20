@@ -1,5 +1,54 @@
 local gen_server = require 'gen_server'
 local supervisor = require 'supervisor'
+local Graphic = require 'graphic'
+local Menu = require 'ui_menu'
+local luaunit = require 'luaunit'
+
+local ArqMenu = {}
+
+local function initUI()
+  local ui = ui_sup.newWindow("terminal",15,7)
+  local title = Graphic:new("ARQ Controls")
+  
+  local crash = Graphic:new("Kill Menu")
+  local run = Graphic:new("Run Program")
+  local observer = Graphic:new("Observer")
+  local shutdown = Graphic:new("Shutdown")
+  
+  local menu = Menu:new()
+  
+  menu:add(crash)
+  menu:add(run)
+  menu:add(observer)
+  menu:add(shutdown)
+  
+  title:setBackgroundColor(colors.lightGray)
+  title:setTextColor(colors.gray)
+  title.align="center"
+  title.width = "max"
+  title.ypos = 2
+  
+  menu.xpos = 2
+  menu.width = "max"
+  
+  ui:add(title)
+  ui:add(menu)
+  
+  menu:link(ui)
+  
+  menu:setBackgroundColor(colors.gray)
+  menu:setTextColor(colors.lightGray)
+  
+  ui:setBackground(colors.lightGray)
+  ui:setText(colors.gray)
+  
+  VM.log("attaching crash to ui")
+  crash.reactor:register("selected",ArqMenu.crash)
+  shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)
+  ui:update()
+  return ui
+end
+
 
 local Server = {}
 
@@ -9,7 +58,7 @@ end
 
 function Server.init()
   VM.register("arq_menu",VM.running())
-  return true, {}
+  return true, {ui = initUI()}
 end
 
 function Server.handle_call(Request,From,State)
@@ -31,17 +80,17 @@ local Sup = {}
 
 function Sup.init()
   VM.log("ArqMenu is Alive!")
-  return true, {{"one_for_one",1,0.1},{ChildSpec}}
+  return true, {{"one_for_one",1,0.05},{ChildSpec}}
 end
-
-local ArqMenu = {}
 
 function ArqMenu.start()
   supervisor.start_link(Sup,{},"arq_menu_sup")
 end
 
 function ArqMenu.crash()
-  gen_server.cast("arq_menu","die")
+  VM.log("ArqMenu crash called.")
+  local ok, err = pcall(function()gen_server.cast("arq_menu","die")end)
+  if not ok then VM.log(err) end
 end
 
 return ArqMenu

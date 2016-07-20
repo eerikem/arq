@@ -44,9 +44,12 @@ function Menu:redraw(ui,noscroll)
   local back = ui.term.getBackgroundColor()
   self:applyColors(ui)
   local x,y = self:setCursor(ui)
+  local X = x
   if self.width then
     local w = self.width
     if w == "max" then
+      x = 1
+      ui.term.setCursorPos(x,y)
       w = ui.term.getSize() end
     local h = self.height
     if self.staticHeight then
@@ -58,11 +61,12 @@ function Menu:redraw(ui,noscroll)
       else incCursorPos(ui.term,x) end
       if DEBUG then
         VM.log(string.format("Drawing %d spaces from %d, %d",w,ui.term.getCursorPos()))
-        end
+      end
       for m=1, w do
         ui.term.write(" ")
       end
     end
+    x = X
     ui.term.setCursorPos(x,y)
   end
   
@@ -81,7 +85,8 @@ function Menu:redraw(ui,noscroll)
       maxWidth = V.width end
 --    write("count = "..counter)sleep(1)
   end
-  self.width = maxWidth
+  if self.width ~= "max" then
+  self.width = maxWidth end
   self.height = counter + self.ypos
   ui.term.setTextColor(color)
   ui.term.setBackgroundColor(back)

@@ -1,7 +1,7 @@
 local gen_server = require "gen_server"
-local Client = require "ui_sup_menu"
 local statusBar = require "statusBar"
 local ui_server = require "ui_server"
+local Reactor = require "reactor"
 
 local Server = {}
 
@@ -134,10 +134,6 @@ function Server.newWindow(name,w,h)
   else
     error("Error: "..name.." not found.",2)
   end
-end
-
-function Server.app(Co)
-  return Client:new(Co)
 end
 
 function Server.statusWindow(Co)

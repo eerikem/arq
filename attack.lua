@@ -3,6 +3,8 @@ local Bundle = require "bundle"
 local Panel = require "ui_obj"
 local Menu = require "ui_menu"
 local Group = require "group"
+local ui_server = require "ui_server"
+local Graphic = require "graphic"
 
 local CABLE_SIDE = "back"
 local MONITOR = "monitor_5"

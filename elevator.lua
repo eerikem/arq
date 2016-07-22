@@ -1,6 +1,9 @@
 local gen_server = require "gen_server"
+local ui_server = require "ui_server"
+local Graphic = require "graphic"
 local Bundle = require "bundle"
 local Radio = require "ui_radio_panel"
+local Panel = require "ui_obj"
 
 local CABLE_SIDE = "back"
 local cables = {

@@ -2,7 +2,6 @@
 --
 --Author: ArqiTek
 --Copyright 2250
-
 local args = {...}
 
 function map(func, tbl)
@@ -13,23 +12,9 @@ function map(func, tbl)
      return newtbl
 end
 
-print = function() end
---write = function() end
-sleep = function() end
+sleep = function() error("Use EVE.sleep within ARQ",2) end
 
-VM = require "vm"
---UI = require "ui"
-Reactor = require "reactor"
-UI = require "ui_lib"
-gen_server = require "gen_server"
-ui_server = require "ui_server"
-ui_sup = require "ui_supervisor"
-EVE = require "eventListener"
-Graphic = require "graphic"
-Panel, List = require "ui_obj"
-Menu = require "ui_menu"
-Group = require "group"
-local arqMenu = require 'arqMenu'
+VM = require 'vm'
 
 function exec(cmd,...)
   if commands then
@@ -38,6 +23,20 @@ function exec(cmd,...)
     VM.log("Warning: Not a command computer")
   end
 end
+
+EVE = require 'eventListener'
+UI = require 'ui_lib'
+
+-----------
+--Run ARQ--
+-----------
+
+
+local supervisor = require 'supervisor'
+local arqSup = require 'arq_sup'
+local ui_sup = require 'ui_supervisor'
+local arqMenu = require 'arqMenu'
+local uiMenu = require 'ui_sup_menu'
 
 local Attack = require "attack"
 local Elevator = require "elevator"
@@ -49,15 +48,11 @@ local Manager = require "door_manager"
 
 VM.init()
 
+supervisor.start_link(arqSup,{},"arq_sup")
+VM.log = ui_sup.statusWindow("terminal")
 
-local _,Li = EVE.start_link()
---local Ui = EVE.subscriber(Li,ui_sup)
-
-local _,Ui = ui_sup.start_link(Li)
-local write = ui_sup.statusWindow("terminal")
-VM.log = write
-
-ui_sup.app("terminal")
+uiMenu:new("terminal")
+arqMenu.start()
 
 --Attack.start()
 --Teleport.start()
@@ -67,10 +62,5 @@ ui_sup.app("terminal")
 --Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
 --Door.startFakeDoor("monitor_3","DENIED")}
 --Manager.start(doors)
-arqMenu.start()
-arqMenu.crash()
 
-while true do
-  --VM.flush()
-  gen_server.cast(Li,{os.pullEvent()})
-end
+EVE:run()

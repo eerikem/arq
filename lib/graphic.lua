@@ -1,5 +1,4 @@
 local Reactor = require 'reactor'
-
 local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0}
 
 function Graphic:new(o)

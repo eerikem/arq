@@ -1,9 +1,11 @@
 local gen_server = require "gen_server"
+local ui_server = require "ui_server"
 local Door = require "door"
 local Graphic = require "graphic"
 local Panel = require "ui_obj"
 local Server = {}
 local luaunit = require "luaunit"
+local Menu = require "ui_menu"
 
 local checkup
 

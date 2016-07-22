@@ -2,7 +2,18 @@ local gen_server = require 'gen_server'
 local ui_sup = require 'ui_supervisor'
 local Reactor = require 'reactor'
 
-local Server = {}
+local Server = {running=false}
+
+function Server:run()
+  if self.running then
+    error("Event listener is already running.",2)
+  else
+    self.running = true
+    while self.running do
+      gen_server.cast("events",{os.pullEvent()})
+    end
+  end
+end
 
 function Server.start_link()
   return gen_server.start_link(Server,{},{},"events")

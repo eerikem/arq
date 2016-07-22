@@ -1,4 +1,9 @@
 local Observer = require "observer"
+local Graphic = require "graphic"
+local Menu = require "ui_menu"
+local Panel, List = require "ui_obj"
+local ui_sup = require "ui_supervisor"
+
 
 local Client = {}
 

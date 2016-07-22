@@ -3,6 +3,7 @@ local supervisor = require 'supervisor'
 local Graphic = require 'graphic'
 local Menu = require 'ui_menu'
 local luaunit = require 'luaunit'
+local ui_sup = require 'ui_supervisor'
 
 local ArqMenu = {}
 

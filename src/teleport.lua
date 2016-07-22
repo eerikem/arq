@@ -1,4 +1,7 @@
 local gen_server = require "gen_server"
+local ui_server = require "ui_server"
+local Graphic = require "graphic"
+local Panel = require "ui_obj"
 
 local Tele = {}
 

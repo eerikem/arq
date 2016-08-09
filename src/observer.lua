@@ -1,6 +1,10 @@
 local luaunit = require 'luaunit'
-
+local gen_server = require 'gen_server'
+local Graphic = require 'graphic'
+local ui_sup = require 'ui_supervisor'
+local Panel, List = require 'ui_obj'
 local Menu = require "ui_menu"
+
 local Client = {}
 
 local threads = {}

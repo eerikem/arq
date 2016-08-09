@@ -4,6 +4,7 @@ local Graphic = require 'graphic'
 local Menu = require 'ui_menu'
 local luaunit = require 'luaunit'
 local ui_sup = require 'ui_supervisor'
+local Observer = require "observer"
 
 local ArqMenu = {}
 
@@ -46,6 +47,7 @@ local function initUI()
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
   shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)
+  observer.reactor:register("selected",function()VM.spawn(function()Observer.observerUI("terminal")end)end)
   ui:update()
   return ui
 end

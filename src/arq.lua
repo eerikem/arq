@@ -45,6 +45,7 @@ local Airlock = require "airlock"
 local Observer = require "observer"
 local Door = require "door"
 local Manager = require "door_manager"
+local Password = require "password"
 
 VM.init()
 
@@ -56,10 +57,11 @@ arqMenu.start()
 
 --Attack.start()
 --Teleport.start()
-Elevator.start()
+--Elevator.start()
+Password.start()
 --Airlock.start()
 --local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
---Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
+Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN")--,
 --Door.startFakeDoor("monitor_3","DENIED")}
 --Manager.start(doors)
 

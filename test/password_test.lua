@@ -3,7 +3,7 @@ local DEBUG = true
 
 VM = require 'vm'
 local Li
-local console
+--local console = window.create(term.current(),1,1,w/3,h)
 VM.log = function(str)
 --  local old = term.redirect(console)
   print(str)
@@ -44,7 +44,7 @@ function tearDown_each()
   if DEBUG then stop() end
   ui = nil
   DEBUG = false
-  console.restoreCursor()
+--  console.restoreCursor()
 end
 
 function runFor( nTime )
@@ -66,6 +66,13 @@ end
 function test_init()
   local pass = Password.start()
   luaunit.assertTrue(pass)
+end
+
+function test_setPassword()
+  local key = 123
+  local pass = Password.start(key)
+  luaunit.assertFalse(Password.submit(pass,321))
+  luaunit.assertTrue(Password.submit(pass,key))
 end
 
 

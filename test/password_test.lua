@@ -1,5 +1,6 @@
 --Enable DEBUG to pause at the end of each test.
-local DEBUG = true
+--local DEBUG = true
+local DEBUG = false
 
 VM = require 'vm'
 local Li
@@ -22,7 +23,7 @@ local Password = require 'password'
 ---------------------
 
 local function stop()
-  while true do
+  while true and DEBUG do
     local event = {os.pullEvent()}
     if event[1] and event[2] and event[1] =="key_up"and event[2]== keys.space then
       break
@@ -38,12 +39,12 @@ function setup_each()
   ui = ui_server.newWindow("terminal",w/2,h/2)
   ui:setBackground(colors.gray)
   ui:align("top","right")
+  ui:update()
 end
 
 function tearDown_each()
   if DEBUG then stop() end
   ui = nil
-  DEBUG = false
 --  console.restoreCursor()
 end
 
@@ -68,11 +69,37 @@ function test_init()
   luaunit.assertTrue(pass)
 end
 
-function test_setPassword()
+function test_submitPassword()
   local key = 123
   local pass = Password.start(key)
-  luaunit.assertFalse(Password.submit(pass,321))
-  luaunit.assertTrue(Password.submit(pass,key))
+  Password.setBuffer(pass,321)
+  luaunit.assertFalse(Password.submit(pass))
+  Password.setBuffer(pass,key)
+  luaunit.assertTrue(Password.submit(pass))
+end
+
+function test_display()
+  local key = 123
+  local pass = Password.start(key)
+  luaunit.assertEquals(Password.getDisplay(pass),'')
+  gen_server.cast("terminal",{"char","1"})
+  luaunit.assertEquals(Password.getDisplay(pass),'*')
+  luaunit.assertEquals(Password.getText(pass),"1")
+  Password.clear(pass)
+  luaunit.assertEquals(Password.getDisplay(pass),'')
+  luaunit.assertEquals(Password.getText(pass),"")
+end
+
+function test_clear_button()
+  local pass = Password.start(123)
+  Password.setBuffer(pass,3214)
+  stop()
+  gen_server.cast("terminal",{"mouse_click",1,1,7,5})
+  luaunit.assertEquals(Password.getDisplay(pass),'')
+end
+
+function test_quit()
+
 end
 
 

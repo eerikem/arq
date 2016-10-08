@@ -270,6 +270,8 @@ function UI:onMe(x,y)
   return false
 end
 
+--TODO better UI registering of events
+--handle conflicts?!? registering and deregistering?!?
 function UI:register(obj,event)
   if event == "clickable" then
     self.selectables[obj]=true
@@ -280,7 +282,7 @@ function UI:register(obj,event)
       end
     end
     self.reactor:register(event,handler)
-  elseif event == "keys" then
+  elseif event == "keys" then --TODO this handler belongs in ui_menu
     local handler = function (event,code,down)
       if code == keys.enter
         or code == keys.left or code == keys.right
@@ -289,6 +291,12 @@ function UI:register(obj,event)
       end
     end
     self.reactor:register("key",handler)
+  elseif event == "key" then
+    --TODO obj is actually a handler passed in
+    self.reactor:register("key",obj)
+  elseif event == "char" then
+    --TODO obj is actually a handler passed in
+    self.reactor:register("char",obj)
   else
     error(event.." not a recognised ui interaction")
   end

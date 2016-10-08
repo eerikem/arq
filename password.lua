@@ -4,8 +4,16 @@ local Panel = require "ui_obj"
 local Graphic = require "graphic"
 local Server = {}
 
-function Server.submit(Co, key)
-  return gen_server.call(Co,{"access",key})
+function Server.submit(Co)
+  return gen_server.call(Co,{"access"})
+end
+
+function Server.setBuffer(Co, key)
+  gen_server.cast(Co,{"set_buffer",key})
+end
+
+function Server.getText(Co)
+  return gen_server.call(Co,{"buffer"})
 end
 
 function Server.start(key)
@@ -14,12 +22,32 @@ function Server.start(key)
   return Co  
 end
 
+function Server.back(Co)
+  gen_server.cast(Co,{"back"})
+end
+
+function Server.sendChar(Co,char)
+  gen_server.cast(Co,{"char",char})
+end
+
+function Server.clear(Co)
+  gen_server.cast(Co,{"clear"})
+end
+
+function Server.quit(Co)
+  gen_server.cast(Co,{"quit"})
+end
+
+function Server.getDisplay(Co)
+  return gen_server.call(Co,{"display"})
+end
+
 function Server.start_link(Co,key)
   return gen_server.start_link(Server,{Co,key})
 end
 
 local function initUI(Co)
-  local ui = ui_server.newWindow(Co,7,5)
+  local ui = ui_server.newWindow(Co,7,5 )
 --  local ui = ui_server.newWindow(Co,12,10)
   
   local title = Graphic:new("ACCESS#")
@@ -32,13 +60,13 @@ local function initUI(Co)
     four = Graphic:new("4"),
     five = Graphic:new("5"),
     six = Graphic:new("6"),
-    delete = Graphic:new("-"),
+    clear = Graphic:new("c"),
     back = Graphic:new("q")
     }
     
   title.width = "max"
   title:setTextColor(colors.orange)
-  local code = Graphic:new("    ***")
+  local code = Graphic:new("       ")
   
   local body = Panel:new()
   body:setLayout("static")
@@ -65,22 +93,22 @@ local function initUI(Co)
   body.width = "max"
   
   buttons.back.ypos = 3
-  buttons.delete.ypos = 3
-  buttons.delete.xpos = 7
+  buttons.clear.ypos = 3
+  buttons.clear.xpos = 7
   
   local bottom = Panel:new()
   bottom:setLayout("static")
   bottom:add(buttons.back)
-  bottom:add(buttons.delete)
+  bottom:add(buttons.clear)
   bottom:setBackgroundColor(colors.lightGray)
   bottom:setTextColor(colors.gray)
   bottom.ypos = 3
-  buttons.delete.ypos = 1
+  buttons.clear.ypos = 1
   buttons.back.ypos = 1
   body:add(bottom)
 --  
 --  body:add(buttons.back)
---  body:add(buttons.delete)
+--  body:add(buttons.clear)
   
   ui:add(title)
   ui:add(code)
@@ -129,19 +157,97 @@ local function initUI(Co)
   
   title:setOnSelect(ui,colorHandler)
   
-  return ui
+  --Prepare handlers!--
+  local Co = VM.running()
+  local function keyHandler(event, code, isHeld)
+    assert(event == "key")
+    if  ( code >= 2 and code <= 11 ) or
+        ( code >= 16 and code <=25 ) or
+        ( code >= 30 and code <=38 ) or
+        ( code >= 44 and code <=50 ) or
+        ( code >= 71 and code <=73 ) or
+        ( code >= 75 and code <=77 ) or
+        ( code >= 79 and code <=82 ) then
+        Server.sendChar(Co,keys.getName( code ))
+    elseif code == 28 then
+      Server.submit(Co)
+    elseif code == 14 or code == 211 then
+      
+    else
+      ui:beep()
+    end
+  end
+  
+  
+  local function charHandler(event,char)
+    assert(event == "char")
+    Server.sendChar(Co,char)
+  end
+  ui:register(charHandler,"char")
+  
+  buttons.clear:setOnSelect(ui,function() Server.clear(Co) end)
+  buttons.back:setOnSelect(ui,function() Server.back(Co) end)
+  return ui,code
+end
+
+local function trim(s)
+  return s:match'^%s*(.*%S)' or ''
+end
+
+local function star(s)
+  local r = ""
+  for n=1, string.len(s) do
+    r = r.. "*"
+  end
+  return r
+end
+
+local function fill(s)
+  local r = ""
+  s = trim(s)
+  for n=1, 7 - string.len(s) do
+    r = r.. " "
+  end
+  return r .. s
+end
+
+function Server.handle_cast(Request,State)
+  local event = Request[1]
+  if event == "set_buffer" then
+    local key = Request[2]
+    State.buffer=key
+    State.display.text=fill(star(key))
+    State.ui:update()
+  elseif event == "char" then
+    local char = Request[2]
+    State.buffer=State.buffer..char
+    State.display.text=fill(State.display.text.."*")
+    State.ui:update()
+  elseif event == "clear" then
+    State.buffer=""
+    State.display.text="       "
+    State.ui:update()
+  elseif event == "back" then
+    --TODO terminate returning focus to parent???
+  else
+    error("unrecognised event: ".. event)
+  end
+  return State
 end
 
 function Server.handle_call(Request,From,State)
   local event = Request[1]
   if event == "access" then
-    local key = Request[2]
-    if key == State.key then
+    if State.buffer == State.key then
       gen_server.reply(From,true)
       --TODO terminate process!
     else
       gen_server.reply(From,false)
     end
+  elseif event == "display" then
+    gen_server.reply(From,trim(State.display.text))
+  elseif event == "buffer" then
+    gen_server.reply(From,trim(State.buffer))
   else
     error("unrecognised event: ".. event)
   end
@@ -149,7 +255,8 @@ function Server.handle_call(Request,From,State)
 end
 
 function Server.init(Co,key)
-  local State = {ui = initUI(Co),key = key}
+  local ui,display = initUI(Co)
+  local State = {ui = ui,display = display,key = key,buffer=""}
   return true, State
 end
 

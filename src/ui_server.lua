@@ -95,9 +95,9 @@ end
 
 local UI_Events = {
   char = function(Req,State)
-    local _,char = unpack(Req)
-    VM.log("UI_Server Received: "..char)
-    return State end,
+    State.focus.reactor:handleEvent(unpack(Req))
+    return State
+    end,
   key = function(Req,State)
     local _,keycode,helddown = unpack(Req)
     local msg = keys.getName( keycode )

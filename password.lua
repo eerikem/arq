@@ -16,9 +16,14 @@ function Server.getText(Co)
   return gen_server.call(Co,{"buffer"})
 end
 
-function Server.start(key)
---  local ok, Co = Server.start_link("monitor_5",key)
-  local ok, Co = Server.start_link("terminal",key)
+--Expects an access key, parent ui and optional Module function argument tuple for callback.
+function Server.start(key, ui, ModFunArg)
+  if key == nil then
+    error("Password requires a key",2) end
+  if type(key) == "number" then
+    key = "" .. key end
+  local ok, Co = Server.start_link(key,ui,ModFunArg)
+  VM.register("password",Co)
   return Co  
 end
 
@@ -43,7 +48,8 @@ function Server.getDisplay(Co)
 end
 
 function Server.start_link(Co,key)
-  return gen_server.start_link(Server,{Co,key})
+--  return gen_server.start_link(Server,{Co,key})
+  return gen_server.start(Server,{Co,key})
 end
 
 local function initUI(Co)
@@ -178,6 +184,11 @@ local function initUI(Co)
     end
   end
   
+  for name, button in pairs(buttons) do
+    if name ~= "clear" and name ~= "back" then
+      button:setOnSelect(ui,function() Server.sendChar(Co,button.text) end)
+    end
+  end
   
   local function charHandler(event,char)
     assert(event == "char")
@@ -214,21 +225,42 @@ end
 function Server.handle_cast(Request,State)
   local event = Request[1]
   if event == "set_buffer" then
-    local key = Request[2]
-    State.buffer=key
-    State.display.text=fill(star(key))
+    local buf = Request[2]
+    State.buffer=buf
+    State.display.text=fill(star(buf))
     State.ui:update()
   elseif event == "char" then
     local char = Request[2]
     State.buffer=State.buffer..char
-    State.display.text=fill(State.display.text.."*")
-    State.ui:update()
+    if string.len(State.buffer) <= 7 then
+      State.display.text=fill(State.display.text.."*")
+    end
+    if State.buffer == State.key then
+      --TODO password match success!
+      State.ui:ping()
+      State.display:setTextColor(colors.green)
+      State.ui:update()
+      EVE.sleep(1)
+      VM.exit("normal")
+    else
+      State.ui:tap()
+      State.ui:update()
+    end
   elseif event == "clear" then
     State.buffer=""
     State.display.text="       "
+    State.ui:ping()
     State.ui:update()
   elseif event == "back" then
     --TODO terminate returning focus to parent???
+    if State.callback then
+      local Module, fun, args = unpack(State.callback)
+      Module[fun](unpack(args))
+      State.ui:beep()
+    else
+      State.ui:beep()
+      VM.exit("normal")
+    end
   else
     error("unrecognised event: ".. event)
   end
@@ -254,9 +286,9 @@ function Server.handle_call(Request,From,State)
   return State
 end
 
-function Server.init(Co,key)
+function Server.init(key,Co,MFA)
   local ui,display = initUI(Co)
-  local State = {ui = ui,display = display,key = key,buffer=""}
+  local State = {ui = ui,display = display,key = key,buffer="",callback=MFA}
   return true, State
 end
 

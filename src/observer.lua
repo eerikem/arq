@@ -7,10 +7,30 @@ local Menu = require "ui_menu"
 
 local Client = {}
 
+function Client.start(Co)
+  if not VM.registered("observer") then
+    gen_server.start(Client,{Co},{},"observer")
+  end
+end
+
+function Client.init(Co)
+  Client.observerUI(Co)
+  return true, {}
+end
+
+function Client.handle_cast(Request,State)
+  local event = Request[1]
+  if event == "die" then
+    VM.exit("normal")
+  else
+    VM.log("observer got unkown event")
+  end
+  return State
+end
+
 local threads = {}
 local names = {}
 local ui
-local alive = false
 
 local function updateThreads()
   for name,thread in pairs(VM.coroutines) do
@@ -57,10 +77,7 @@ local function onThreadFocus(thread,pane)
   end
 end
 
-function Client.observerUI(Co)
-  if alive then return end
-  alive = true
-  
+function Client.observerUI(Co)  
   ui = ui_sup.newWindow(Co,40,15)
   ui:setBackground(colors.gray)
   ui:setText(colors.lightGray)
@@ -87,9 +104,8 @@ function Client.observerUI(Co)
   local function kill()
     threads={}
     names={}
-    gen_server.cast(Co,{"remove",ui})
+    gen_server.cast("observer",{"die"})
     ui = nil
-    alive = false
   end
   
   t:setOnSelect(ui,kill)

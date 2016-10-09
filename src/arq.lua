@@ -58,10 +58,10 @@ arqMenu.start()
 --Attack.start()
 --Teleport.start()
 --Elevator.start()
-Password.start()
+Password.start(123,"terminal",{{fun=function(str)VM.log(str)end},"fun",{"Password success."}})
 --Airlock.start()
 --local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
-Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN")--,
+--Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN"),
 --Door.startFakeDoor("monitor_3","DENIED")}
 --Manager.start(doors)
 

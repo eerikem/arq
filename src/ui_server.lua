@@ -73,6 +73,7 @@ local function removeUI(State,ui)
 end
 
 local i = 0
+--TODO ui moved to top of stack?!?
 local function redrawStack(State,ui)
   i = i + 1
   for _,UI in ipairs(State.stack) do
@@ -151,7 +152,7 @@ function Server.init(term,name)
   windows[ui] = true 
   
   --TODO reactor sends events to coroutine handlers
-  local o = {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new()}
+  local o = {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new(),monitors={}}
   o.reactor = Reactor:new(o)
   for event,handler in pairs(UI_Events) do
     o.reactor:register(event,handler)
@@ -188,7 +189,11 @@ function Server.handle_call(Request,From,State)
   local event = Request[1]
   if event == "new_window" then
     local _,w,h = unpack(Request)
-    gen_server.reply(From,newWindow(State,VM.running(),w,h))
+    local Co,Ref = unpack(From)
+    local ref = VM.monitor("process", Co)
+    local window = newWindow(State,VM.running(),w,h)
+    State.monitors[ref]=window
+    gen_server.reply(From,window)
   elseif event == "update" then
     local ui = Request[2]
     redrawStack(State,ui)
@@ -213,7 +218,9 @@ function Server.handle_cast(Request,State)
       redrawStack(State,ui)
     elseif event == "remove" then
       removeUI(State,Request[2])
-      redrawStack(State,ui)
+      --TODO redraw new stack
+      --TODO remove monitor
+      redrawStack(State)
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --todo generic event subscriber handler
@@ -234,8 +241,17 @@ function Server.handle_cast(Request,State)
   return State
 end
 
-function Server.handleInfo(Request,State)
-  VM.log("Warning UI server handleInfo")
+function Server.handle_info(Request,State)
+  local event = Request[1]
+  if event == "DOWN" then
+    local _,ref,type,Co,reason = unpack(Request)
+    local ui = State.monitors[ref]
+    State.monitors[ref]=nil
+    removeUI(State,ui)
+    redrawStack(State)
+  else
+    VM.log("Warning UI server handleInfo")
+  end
   return State
 end
 

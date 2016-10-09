@@ -22,7 +22,8 @@ end
 function Graphic:setOnSelect(ui,handler)
   self.reactor:register("mouse_up",handler)
   self.reactor:register("monitor_touch",handler)
-  self.reactor:register("mouse_click",handler)
+--  TODO selection should occur after both mouse click and mouse up!
+--  self.reactor:register("mouse_click",handler)
   ui:register(self,"clickable")
 end
 

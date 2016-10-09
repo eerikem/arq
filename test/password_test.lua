@@ -60,19 +60,27 @@ function runFor( nTime )
   end
 end
 
+function exec(cmd,...)
+  if commands then
+    commands.execAsync(string.format(cmd,unpack(arg)))
+  else
+    VM.log("Warning: Not a command computer")
+  end
+end
+
 --------------
 --Test Suite--
 --------------
 
 function test_init()
-  local pass = Password.start()
+  local pass = Password.start(123,"terminal")
   luaunit.assertTrue(pass)
 end
 
 function test_submitPassword()
-  local key = 123
-  local pass = Password.start(key)
-  Password.setBuffer(pass,321)
+  local key = "123"
+  local pass = Password.start(key,"terminal")
+  Password.setBuffer(pass,"321")
   luaunit.assertFalse(Password.submit(pass))
   Password.setBuffer(pass,key)
   luaunit.assertTrue(Password.submit(pass))
@@ -80,9 +88,10 @@ end
 
 function test_display()
   local key = 123
-  local pass = Password.start(key)
+  local pass = Password.start(key,"terminal")
   luaunit.assertEquals(Password.getDisplay(pass),'')
   gen_server.cast("terminal",{"char","1"})
+  stop()
   luaunit.assertEquals(Password.getDisplay(pass),'*')
   luaunit.assertEquals(Password.getText(pass),"1")
   Password.clear(pass)
@@ -91,10 +100,10 @@ function test_display()
 end
 
 function test_clear_button()
-  local pass = Password.start(123)
-  Password.setBuffer(pass,3214)
+  local pass = Password.start(123,"terminal")
+  Password.setBuffer(pass,"3214")
   stop()
-  gen_server.cast("terminal",{"mouse_click",1,1,7,5})
+  gen_server.cast("terminal",{"monitor_touch",7,5})
   luaunit.assertEquals(Password.getDisplay(pass),'')
 end
 

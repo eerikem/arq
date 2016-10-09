@@ -30,16 +30,6 @@ function Client:new(Co)
   m:link(ui)
   ui:align("right")
   ui:update()
-  
-  local function fun()
-    local Co = VM.spawn(function()
-      Observer.observerUI("terminal") end)
-    ui:update()
-    VM.log("Spawned ".. tostring(Co))
-  end
-  t:setOnSelect(ui,fun)
-  
-  ui:update()
 end
 
 return Client

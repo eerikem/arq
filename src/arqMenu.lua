@@ -47,7 +47,7 @@ local function initUI()
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
   shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)
-  observer.reactor:register("selected",function()VM.spawn(function()Observer.observerUI("terminal")end)end)
+  observer.reactor:register("selected",function()Observer.start("terminal")end)
   ui:update()
   return ui
 end

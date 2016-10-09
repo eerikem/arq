@@ -1,5 +1,5 @@
 local Reactor = require 'reactor'
-local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0}
+local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0,lastClick=-1}
 
 function Graphic:new(o)
   if type(o)=="string" then
@@ -20,10 +20,19 @@ function Graphic:setBackgroundColor(c)
 end
 
 function Graphic:setOnSelect(ui,handler)
-  self.reactor:register("mouse_up",handler)
+  local function mouseHandler(type,id,button,x,y)
+    if type == "mouse_click" then
+      self.lastClick = id
+    elseif type == "mouse_up" then
+      if id == self.lastClick then
+        self.reactor:handleEvent("selected")
+      end
+    end
+  end
+  self.reactor:register("mouse_up",mouseHandler)
+  self.reactor:register("mouse_click",mouseHandler)
   self.reactor:register("monitor_touch",handler)
---  TODO selection should occur after both mouse click and mouse up!
---  self.reactor:register("mouse_click",handler)
+  self.reactor:register("selected",handler)
   ui:register(self,"clickable")
 end
 

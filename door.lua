@@ -1,8 +1,9 @@
 local gen_server = require "gen_server"
-local ui_server = require "ui_server"
+local UI = require "ui"
 local Bundle = require "bundle"
 local Graphic = require "graphic"
 local Panel = require "ui_obj"
+local Password = require "password"
 
 local CABLE_SIDE = "back"
 
@@ -45,7 +46,7 @@ function Door.start()
   return Co
 end
 
-function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_title,door_delay)
+function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_title,door_delay,password)
   if not doorCableColor or not detectorCableColor or not monitor then error("Badarg",2)end
   local delay = door_delay or 5
   local title = ui_title or "ACCESS"
@@ -56,7 +57,8 @@ function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_tit
     title = title,
     door = Bundle:new(CABLE_SIDE,doorCableColor,"door"),
     detector = Bundle:new(CABLE_SIDE,detectorCableColor,"detector"),
-    outer = monitor
+    outer = monitor,
+    password = password
   }
   local ok, Co = Door.start_link(properties)
   VM.log("Started Detector Door "..tostring(Co))
@@ -64,7 +66,7 @@ function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_tit
   return Co
 end
 
-function Door.startMonitorDoor(doorCableColor,innerMonitor,outerMonitor,ui_title,door_delay)
+function Door.startMonitorDoor(doorCableColor,innerMonitor,outerMonitor,ui_title,door_delay,password)
   if not doorCableColor or not innerMonitor or not outerMonitor then error("Badarg",2)end
   local delay = door_delay or 5
   local title = ui_title or "ACCESS"
@@ -75,7 +77,8 @@ function Door.startMonitorDoor(doorCableColor,innerMonitor,outerMonitor,ui_title
     title = title,
     door = Bundle:new(CABLE_SIDE,doorCableColor,"door"),
     inner = innerMonitor,
-    outer = outerMonitor
+    outer = outerMonitor,
+    password = password
   }
   local ok, Co = Door.start_link(properties)
   VM.log("Started Monitor Door "..tostring(Co))
@@ -102,6 +105,7 @@ function Door.open(door)
 end
 
 function Door.forceOpen(door)
+  VM.log("Called force Open")
   return gen_server.call(door,{"open",true})
 end
 
@@ -147,7 +151,9 @@ function Door.start_link(properties)
 end
 
 local function doorUI(Co,door)
-  local ui = ui_server.newWindow(Co,7,5)
+  local ui_co, ui = UI.start(Co,7,5)
+  ui.co = ui_co
+  ui.handle = function(...)UI.handleEvent(ui_co,...)end
   local title = Graphic:new(door.title)
   local body = Panel:new()
   local open = Graphic:new("OPEN")
@@ -194,6 +200,9 @@ local function doorUI(Co,door)
         if res == "opened" then
           ui:ping()
           enable(close)
+        elseif res == "canceled" then
+          VM.log("received Canceled")
+          ui:tap()
         else
           ui:beep()
           status.text="Denied!"
@@ -326,9 +335,34 @@ function Door.handle_call(Request,From,State)
     if not force and State.locked or not State.door then
       gen_server.reply(From,"denied")
     else
+      if State.password and not force then
+        local mon = From[1]
+        VM.log("from: "..tostring(mon))
+        VM.log("outer ui co: "..tostring(State.uis.outer.co))
+        if State.uis.inner then
+        VM.log("inner ui co: "..tostring(State.uis.inner.co)) end
+        if mon == State.uis.outer.co then
+          mon = State.outer
+        else
+          mon = State.inner
+        end
+        local Mod = {
+          success = function (door,From)
+            Door.forceOpen(door)
+            gen_server.reply(From,"opened")
+            end,
+          canceled = function (From)
+            gen_server.reply(From,"canceled")
+          end
+        }
+        Password.start(State.password,mon,
+          {Mod,"success",{VM.running(),From}},
+          {Mod,"canceled",{From}})
+        return State --TODO handle waiting for password
+      end
       gen_server.reply(From,"opened")
-      if State.inner then State.uis.inner.reactor:handleEvent("opened") end
-      State.uis.outer.reactor:handleEvent("opened")
+      if State.inner then State.uis.inner.handle("opened") end
+      State.uis.outer.handle("opened")
       open(State)
     end
   elseif event == "close" then
@@ -337,8 +371,8 @@ function Door.handle_call(Request,From,State)
       gen_server.reply(From,"denied")
     else
       gen_server.reply(From,"closed")
-      if State.inner then State.uis.inner.reactor:handleEvent("closed") end
-      State.uis.outer.reactor:handleEvent("closed")
+      if State.inner then State.uis.inner.handle("closed") end
+      State.uis.outer.handle("closed")
       close(State)
       if State.timer then
         VM.send(State.timer,"cancel") end
@@ -361,8 +395,8 @@ function Door.handle_cast(Request,State)
       if not State.alreadyOn then
         if not State.open then
           open(State)
-          State.uis.outer.reactor:handleEvent("opened")
-          if State.inner then State.uis.inner.reactor:handleEvent("opened") end
+          State.uis.outer.handle("opened")
+          if State.inner then State.uis.inner.handle("opened") end
         else
           if State.timer then VM.send(State.timer,"reset")end
         end
@@ -375,8 +409,8 @@ function Door.handle_cast(Request,State)
   elseif event == "close" then
     --"Close signal from timer."
     if not State.locked then
-      State.uis.outer.reactor:handleEvent("closed")
-      if State.inner then State.uis.inner.reactor:handleEvent("closed") end
+      State.uis.outer.handle("closed")
+      if State.inner then State.uis.inner.handle("closed") end
       close(State)
     end
   elseif event == "lock" then

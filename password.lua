@@ -17,14 +17,13 @@ function Server.getText(Co)
 end
 
 --Expects an access key, parent ui and optional Module function argument tuple for callback.
-function Server.start(key, ui, ModFunArg)
+function Server.start(key, ui, success, canceled, failure)
   if key == nil then
     error("Password requires a key",2) end
   if type(key) == "number" then
     key = "" .. key end
-  local ok, Co = Server.start_link(key,ui,ModFunArg)
-  VM.register("password",Co)
-  return Co  
+  local ok, Co = Server.start_link(ui, key, success, canceled, failure)
+  return Co
 end
 
 function Server.back(Co)
@@ -47,17 +46,15 @@ function Server.getDisplay(Co)
   return gen_server.call(Co,{"display"})
 end
 
-function Server.start_link(Co,key)
+function Server.start_link(Co,key,MFA,MFA2,MFA3)
 --  return gen_server.start_link(Server,{Co,key})
-  return gen_server.start(Server,{Co,key})
+  return gen_server.start(Server,{Co,key,MFA,MFA2,MFA3})
 end
 
 local function initUI(Co)
   local ui = ui_server.newWindow(Co,7,5 )
 --  local ui = ui_server.newWindow(Co,12,10)
-  
   local title = Graphic:new("ACCESS#")
-  
   local buttons = {
     zero = Graphic:new("0"),
     one = Graphic:new("1"),
@@ -67,7 +64,7 @@ local function initUI(Co)
     five = Graphic:new("5"),
     six = Graphic:new("6"),
     clear = Graphic:new("c"),
-    back = Graphic:new("q")
+    back = Graphic:new("x")
     }
     
   title.width = "max"
@@ -236,10 +233,11 @@ function Server.handle_cast(Request,State)
       State.display.text=fill(State.display.text.."*")
     end
     if State.buffer == State.key then
-      --TODO password match success!
+      local M,fun,arg = unpack(State.success)
       State.ui:ping()
       State.display:setTextColor(colors.green)
       State.ui:update()
+      M[fun](unpack(arg))
       EVE.sleep(1)
       VM.exit("normal")
     else
@@ -253,14 +251,12 @@ function Server.handle_cast(Request,State)
     State.ui:update()
   elseif event == "back" then
     --TODO terminate returning focus to parent???
-    if State.callback then
-      local Module, fun, args = unpack(State.callback)
+    if State.canceled then
+      VM.log("Throwing Canceled")
+      local Module, fun, args = unpack(State.canceled)
       Module[fun](unpack(args))
-      State.ui:beep()
-    else
-      State.ui:beep()
-      VM.exit("normal")
     end
+    VM.exit("normal")
   else
     error("unrecognised event: ".. event)
   end
@@ -272,7 +268,7 @@ function Server.handle_call(Request,From,State)
   if event == "access" then
     if State.buffer == State.key then
       gen_server.reply(From,true)
-      --TODO terminate process!
+      VM.exit("normal")
     else
       gen_server.reply(From,false)
     end
@@ -286,9 +282,10 @@ function Server.handle_call(Request,From,State)
   return State
 end
 
-function Server.init(key,Co,MFA)
+function Server.init(Co,key,MFA,MFA2,MFA3)
   local ui,display = initUI(Co)
-  local State = {ui = ui,display = display,key = key,buffer="",callback=MFA}
+  local State = {ui = ui,display = display,key = key,
+    buffer="",success=MFA,canceled=MFA2,failure=MFA3}
   return true, State
 end
 

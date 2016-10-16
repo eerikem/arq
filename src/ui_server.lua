@@ -21,6 +21,14 @@ local function getTerm(State,x,y)
   return nil
 end
 
+local function handle(Req,State)
+  if State.parents[State.focus] then
+    gen_server.cast(State.parents[State.focus],Req)
+  else
+    State.focus.reactor:handleEvent(unpack(Req))
+  end
+end
+
 local function handleMouse(Req,State)
   local event = unpack(Req)
   if event == "mouse_scroll" then
@@ -28,6 +36,7 @@ local function handleMouse(Req,State)
     local ui = getTerm(State,x,y)
     --TODO deal with stack depth and overlap
     if ui then
+      State.focus = ui
       if button == -1 then
         ui.reactor:handleEvent("scroll","scroll_up",x,y)
       elseif button == 1 then
@@ -42,7 +51,9 @@ local function handleMouse(Req,State)
     local event,id,button,x,y = unpack(Req)
     local ui = getTerm(State,x,y)
     --TODO change of focus event?
-    if ui then ui.reactor:handleEvent(unpack(Req))
+    if ui then
+      State.focus = ui
+      ui.reactor:handleEvent(unpack(Req))
     else VM.log("No ui for "..event.." at "..x.." "..y) end
   else
     VM.log("UI_Server Received: "..event.." at "..x.." "..y)
@@ -54,7 +65,9 @@ local function handleTouch(Req,State)
   local event,x,y = unpack(Req)
   VM.log(State.ui.name.." touched at "..x.." "..y)
   local ui = getTerm(State,x,y)
-  if ui then ui.reactor:handleEvent(unpack(Req))
+  if ui then
+    State.focus = ui
+    handle(Req,State)
   else VM.log("No ui for "..event.." at "..x.." "..y) end
   return State 
 end
@@ -96,14 +109,14 @@ end
 
 local UI_Events = {
   char = function(Req,State)
-    State.focus.reactor:handleEvent(unpack(Req))
+    handle(Req,State)
     return State
     end,
   key = function(Req,State)
     local _,keycode,helddown = unpack(Req)
     local msg = keys.getName( keycode )
     if helddown then msg = msg.." down at UI_Server" end
-    State.focus.reactor:handleEvent(unpack(Req))
+    handle(Req,State)
     return State 
     end,
   key_up = function(Req,State)
@@ -152,7 +165,10 @@ function Server.init(term,name)
   windows[ui] = true 
   
   --TODO reactor sends events to coroutine handlers
-  local o = {native = term, ui = ui,focus = ui,stack = {ui},windows=windows,events={},producer=Prod:new(),monitors={}}
+  local o = {native = term, ui = ui,focus = ui,stack = {ui},
+             windows=windows,events={},producer=Prod:new(),
+             monitors={},parents={}
+             }
   o.reactor = Reactor:new(o)
   for event,handler in pairs(UI_Events) do
     o.reactor:register(event,handler)
@@ -188,11 +204,13 @@ end
 function Server.handle_call(Request,From,State)
   local event = Request[1]
   if event == "new_window" then
-    local _,w,h = unpack(Request)
-    local Co,Ref = unpack(From)
+    local _,w,h,Parent = unpack(Request)
+    local Co = Parent or unpack(From)
     local ref = VM.monitor("process", Co)
     local window = newWindow(State,VM.running(),w,h)
     State.monitors[ref]=window
+    if Parent then 
+    State.parents[window]=From[1]end
     gen_server.reply(From,window)
   elseif event == "update" then
     local ui = Request[2]
@@ -259,9 +277,9 @@ function Server.listen(Co,event,co)
   gen_server.cast(Co,{"register",event,co})
 end
 
-function Server.newWindow(Co,w,h)
+function Server.newWindow(Co,w,h,Parent)
   --todo handle requests to bad monitors
-  local ui = gen_server.call(Co,{"new_window",w,h})
+  local ui = gen_server.call(Co,{"new_window",w,h,Parent})
   return ui
 end
 

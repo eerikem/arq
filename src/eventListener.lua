@@ -46,7 +46,7 @@ local function clickHandler(server)
 end
 
 function Server.init()
-  local o = {clickCounter=0,timers={}}
+  local o = {clickCounter=0,timers={},events={}}
   local reactor = Reactor:new(o)
   o.reactor = reactor
   for event,handler in pairs(UI_Events) do
@@ -65,6 +65,13 @@ function Server.handle_call(Request,From,State)
     local timer = os.startTimer(time)
     gen_server.reply(From,timer)
     State.timers[timer]=From[1]
+  elseif event == "queue" then
+    local Event = Request[2]
+    local time = Request[3]
+    local timer = os.startTimer(time)
+    State.timers[timer]=From[1]
+    State.events[timer]=Event
+    gen_server.reply(From,timer)
   end
   return State
 end
@@ -85,8 +92,12 @@ function Server.handle_cast(Request,State)
 --    VM.log("Events got timer")
     local timer = Request[2]
     if State.timers[timer] then
---      VM.log("sending wake")
-      VM.send(State.timers[timer],"wake",timer)
+      if State.events[timer] then
+        gen_server.cast(State.timers[timer],{State.events[timer],timer})
+        State.events[timer]=nil
+      else
+        VM.send(State.timers[timer],"wake",timer)
+      end
       State.timers[timer]=nil
     end
   elseif event == "peripheral_detach" then
@@ -157,5 +168,10 @@ function Server.subscriber(Co,Module)
   return co
 end
 
+--Queue an event to be triggered after time.
+--Returns reference
+function Server.queue(event,time)
+  return gen_server.call("events",{"queue",event,time},"infinite")
+end
 
 return Server

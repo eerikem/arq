@@ -57,12 +57,12 @@ arqMenu.start()
 
 --Attack.start()
 --Teleport.start()
---Elevator.start()
+Elevator.start()
 --Password.start(123,"terminal",{{fun=function(str)VM.log(str)end},"fun",{"Password success."}})
 --Airlock.start()
-local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_5","Room 51",nil,"123"),
-Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN",nil,"123"),
-Door.startFakeDoor("monitor_3","DENIED")}
-Manager.start(doors)
+--local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_5","Room 51",nil,"123"),
+--Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN",nil,"123"),
+--Door.startFakeDoor("monitor_3","DENIED")}
+--Manager.start(doors)
 
 EVE:run()

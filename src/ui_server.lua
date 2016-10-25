@@ -6,6 +6,14 @@ local Prod = require 'producer'
 local Graphic = require 'graphic'
 local Server = {}
 
+
+local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+
+local function beep()
+  exec(errorSound)
+end
+
+
 function Server.start_link(term,termName)
   return gen_server.start_link(Server,{term,termName},{})
 end
@@ -38,9 +46,9 @@ local function handleMouse(Req,State)
     if ui then
       State.focus = ui
       if button == -1 then
-        ui.reactor:handleEvent("scroll","scroll_up",x,y)
+        handle({"scroll","scroll_up",x,y},State)
       elseif button == 1 then
-        ui.reactor:handleEvent("scroll","scroll_down",x,y)
+        handle({"scroll","scroll_down",x,y},State)
       else
         error("Bad mouse_scroll received")
       end
@@ -53,7 +61,7 @@ local function handleMouse(Req,State)
     --TODO change of focus event?
     if ui then
       State.focus = ui
-      ui.reactor:handleEvent(unpack(Req))
+      handle(Req,State)
     else VM.log("No ui for "..event.." at "..x.." "..y) end
   else
     VM.log("UI_Server Received: "..event.." at "..x.." "..y)
@@ -203,6 +211,7 @@ end
 
 function Server.handle_call(Request,From,State)
   local event = Request[1]
+  
   if event == "new_window" then
     local _,w,h,Parent = unpack(Request)
     local Co = Parent or unpack(From)
@@ -210,7 +219,7 @@ function Server.handle_call(Request,From,State)
     local window = newWindow(State,VM.running(),w,h)
     State.monitors[ref]=window
     if Parent then 
-    State.parents[window]=From[1]end
+      State.parents[window]=From[1]end
     gen_server.reply(From,window)
   elseif event == "update" then
     local ui = Request[2]
@@ -278,7 +287,7 @@ function Server.listen(Co,event,co)
 end
 
 function Server.newWindow(Co,w,h,Parent)
-  --todo handle requests to bad monitors
+  --TODO handle requests to bad monitors
   local ui = gen_server.call(Co,{"new_window",w,h,Parent})
   return ui
 end

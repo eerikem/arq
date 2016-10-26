@@ -43,7 +43,7 @@ local function initUI()
   
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
-  
+  ui:align("center","left")
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
   shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)

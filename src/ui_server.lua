@@ -93,16 +93,16 @@ local function removeUI(State,ui)
   end
 end
 
-local i = 0
 --TODO ui moved to top of stack?!?
 local function redrawStack(State,ui)
-  i = i + 1
-  for _,UI in ipairs(State.stack) do
-    UI.term.setVisible(true)
-    UI.term.setVisible(false)
---    VM.log("Here "..i.." "..UI.pane.id)
+  local redraw = false
+  for i,UI in ipairs(State.stack) do
+    if UI == ui or not ui then redraw = true end
+    if redraw then
+      UI.term.setVisible(true)
+      UI.term.setVisible(false)
+    end
   end
---  if i == 2 then error("reached iteration "..i) end
 end
 
 local function resized(_,State)

@@ -46,6 +46,7 @@ local Observer = require "observer"
 local Door = require "door"
 local Manager = require "door_manager"
 local Password = require "password"
+local ARQ_lab = require "arq_lab"
 
 VM.init()
 
@@ -53,16 +54,22 @@ supervisor.start_link(arqSup,{},"arq_sup")
 VM.log = ui_sup.statusWindow("terminal")
 
 uiMenu:new("terminal")
-arqMenu.start()
 
 --Attack.start()
 --Teleport.start()
 --Elevator.start()
 --Password.start(123,"terminal",{{fun=function(str)VM.log(str)end},"fun",{"Password success."}})
 --Airlock.start()
-local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_5","Room 51",nil,"123"),
-Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_3","ADMIN",nil,"123"),
-Door.startFakeDoor("monitor_3","DENIED")}
+local doors = {
+--  Door.startMonitorDoor(colors.yellow,"monitor_111","monitor_112","Lab 102",nil,"123"),
+  Door.startMonitorDoor(colors.yellow,"terminal","monitor_112","Lab 102",nil,"123"),
+  Door.startFakeDoor("monitor_116","Lab 103"),
+  Door.startFakeDoor("monitor_118","Lab 101")
+--Door.startFakeDoor("monitor_3","DENIED")
+}
 Manager.start(doors)
+ARQ_lab.start()
+
+arqMenu.start()
 
 EVE:run()

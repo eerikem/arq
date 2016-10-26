@@ -31,7 +31,7 @@ end
 
 local function handle(Req,State)
   if State.parents[State.focus] then
-    gen_server.cast(State.parents[State.focus],Req)
+    gen_server.cast(State.parents[State.focus],{"handle",Req})
   else
     State.focus.reactor:handleEvent(unpack(Req))
   end

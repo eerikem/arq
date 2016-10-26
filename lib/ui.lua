@@ -7,7 +7,7 @@ local UI = {}
 ----------------
 
 function UI.handleEvent(Co,...)
-  gen_server.cast(Co,arg)
+  gen_server.cast(Co,{"handle",arg})
 end
 
 --Returns co, ui
@@ -18,6 +18,10 @@ end
 
 function UI.getUI(Co)
   return gen_server.call(Co,{"ui"})
+end
+
+function UI.register(Co,event,handler)
+  gen_server.cast(Co,{"register",event,handler})
 end
 
 -----------
@@ -40,7 +44,15 @@ function UI.handle_call(Request,From,State)
 end
 
 function UI.handle_cast(Request,State)
-  State.ui.reactor:handleEvent(unpack(Request))
+  local event = Request[1]
+  --WARNING this event has dependant call in ui_server.lua
+  if event == "handle" then
+    State.ui.reactor:handleEvent(unpack(Request[2]))
+  elseif event == "register" then
+    State.ui.reactor:register(Request[2],Request[3])
+  else
+    error("Problem in UI module handle_cast"..event)
+  end
 	return State
 end
 

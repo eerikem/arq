@@ -184,8 +184,10 @@ local function doorUI(Co,door)
   end
   
   local lastDenied = nil
+  local denyTime
   local flashDenied = function()
-        EVE.sleep(1)
+        EVE.sleep(denyTime or 1)
+        denyTime = nil
         if lastDenied == VM.running() then
           status.text="       "
           ui:update()
@@ -196,7 +198,8 @@ local function doorUI(Co,door)
   local function handler(door,reactor)
     return function()
       if reactor.parent == open then
-        local res = Door.open(door)
+        local res, time = Door.open(door)
+        denyTime = time
         if res == "opened" then
           ui:ping()
           enable(close)
@@ -210,7 +213,8 @@ local function doorUI(Co,door)
           lastDenied = VM.spawn(flashDenied)
         end
       elseif reactor.parent == close then
-        local res = Door.close(door)
+        local res, time = Door.close(door)
+        denyTime = time
         if res == "closed" then
           ui:ping()
           enable(open)
@@ -340,7 +344,7 @@ function Door.handle_call(Request,From,State)
         VM.log("from: "..tostring(mon))
         VM.log("outer ui co: "..tostring(State.uis.outer.co))
         if State.uis.inner then
-        VM.log("inner ui co: "..tostring(State.uis.inner.co)) end
+          VM.log("inner ui co: "..tostring(State.uis.inner.co)) end
         if mon == State.uis.outer.co then
           mon = State.outer
         else
@@ -348,9 +352,13 @@ function Door.handle_call(Request,From,State)
         end
         local Mod = {
           success = function (door,From)
-            Door.forceOpen(door)
-            gen_server.reply(From,"opened")
-            end,
+            if State.locked then
+              gen_server.reply(From,"denied",2)
+            else
+              Door.forceOpen(door)
+              gen_server.reply(From,"opened")
+            end
+          end,
           canceled = function (From)
             gen_server.reply(From,"canceled")
           end

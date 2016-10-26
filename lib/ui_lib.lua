@@ -297,6 +297,8 @@ function UI:register(obj,event)
   elseif event == "char" then
     --TODO obj is actually a handler passed in
     self.reactor:register("char",obj)
+  elseif event == "draggable" then
+    self.reactor:register("mouse_drag",obj)
   else
     error(event.." not a recognised ui interaction")
   end

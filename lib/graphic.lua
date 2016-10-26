@@ -36,6 +36,10 @@ function Graphic:setOnSelect(ui,handler)
   ui:register(self,"clickable")
 end
 
+function Graphic:setJustOnSelect(ui,handler)
+  self.reactor:register("selected",handler)
+end
+
 function Graphic:getSize(width)
   if not width then error("get size requires width for context") end
   local length = string.len(self.text)
@@ -65,6 +69,10 @@ function Graphic:getTextFromLine(line,width)
   else
     return nil
   end
+end
+
+function Graphic:align(pos)
+  self.align = pos
 end
 
 function Graphic:onMe(x,y)

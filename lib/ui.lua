@@ -10,6 +10,7 @@ function UI.handleEvent(Co,...)
   gen_server.cast(Co,arg)
 end
 
+--Returns co, ui
 function UI.start(Co,w,h)
   local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running()},{})
   return co, UI.getUI(co)
@@ -25,6 +26,8 @@ end
 
 function UI.init(Co,w,h,Parent)
   local ui = ui_server.newWindow(Co,w,h,Parent)
+  local co = VM.running()
+  ui.handle = function(...)UI.handleEvent(co,...)end
   return true, {ui = ui}
 end
 

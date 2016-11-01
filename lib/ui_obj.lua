@@ -452,6 +452,8 @@ function Panel:remove(c)
     end
     
     return pos
+  else
+    error("object was not found in this Panel",2)
   end
   return nil
 end

@@ -89,7 +89,7 @@ function UI.handle_cast(Request,State)
     if State.ui.reactor:handling(Request[1]) then
       State.ui.reactor:handleEvent(unpack(Request))
     else
-      error("Problem in UI module handle_cast "..event)
+      VM.log("UI module handle_cast received unkown: "..event)
     end
   end
 	return State

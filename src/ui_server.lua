@@ -27,14 +27,11 @@ function Server.start_link(term,termName)
 end
 
 local function getTerm(State,x,y)
-  for i=#State.stack,1,-1 do
-    local UI = State.stack[i]
---    VM.log("Checking "..UI.pane.id)
-    if UI:onMe(x,y) then
-      return UI
-    end
+  local ui = State.focus
+  while not ui:onMe(x,y) do
+    ui = ui.next
   end
-  return nil
+  return ui
 end
 
 local function handle(Req,State)
@@ -45,14 +42,20 @@ local function handle(Req,State)
   end
 end
 
+local function shiftFocus(State,ui)
+  if State.focus ~= ui and ui ~= State.background then
+    ui:bump(State.focus)
+    State.focus = ui
+  end
+end
+
 local function handleMouse(Req,State)
   local event = unpack(Req)
   if event == "mouse_scroll" then
     local _,button,x,y = unpack(Req)
     local ui = getTerm(State,x,y)
-    --TODO deal with stack depth and overlap
     if ui then
-      State.focus = ui
+      shiftFocus(State,ui)
       if button == -1 then
         handle({"scroll","scroll_up",x,y},State)
       elseif button == 1 then
@@ -68,7 +71,7 @@ local function handleMouse(Req,State)
     local ui = getTerm(State,x,y)
     --TODO change of focus event?
     if ui then
-      State.focus = ui
+      shiftFocus(State,ui)
       handle(Req,State)
     else VM.log("No ui for "..event.." at "..x.." "..y) end
   else
@@ -82,34 +85,43 @@ local function handleTouch(Req,State)
   VM.log(State.ui.name.." touched at "..x.." "..y)
   local ui = getTerm(State,x,y)
   if ui then
-    State.focus = ui
+    shiftFocus(State,ui)
     handle(Req,State)
   else VM.log("No ui for "..event.." at "..x.." "..y) end
   return State 
 end
 
 local function removeUI(State,ui)
-  for i,UI in ipairs(State.stack) do
-    if ui == UI then
-      table.remove(State.stack,i)
-      ui.term.setVisible(false)
-      if State.focus == ui then
-        --TODO unsafe indexing here
-        State.focus = State.stack[i-1]
-      end
-    end
+  local UI = ui:leave()
+  ui.term.setVisible(false)
+  if State.focus == ui then
+    State.focus = UI
   end
 end
 
---TODO ui moved to top of stack?!?
+local function redraw(ui)
+  ui.term.setVisible(true)
+  ui.term.setVisible(false)
+end
+
 local function redrawStack(State,ui)
-  local redraw = false
-  for i,UI in ipairs(State.stack) do
-    if UI == ui or not ui then redraw = true end
-    if redraw then
-      UI.term.setVisible(true)
-      UI.term.setVisible(false)
+  if not ui or ui == State.background then
+    local ui = State.background
+    redraw(ui)
+    ui = ui.last
+    while ui ~= State.focus do
+      redraw(ui)
+      ui = ui.last
     end
+    if State.focus ~= State.background then
+      redraw(ui) end
+  else
+    while ui ~= State.focus do
+      redraw(ui)
+      ui = ui.last
+    end
+    if State.focus ~= State.background then
+      redraw(ui) end
   end
 end
 
@@ -158,6 +170,36 @@ local UI_Events = {
   term_resize = resized
 }
 
+--- The extended ui obj
+-- @type ui
+-- @extends lib.ui_lib#ui
+
+local function leave(self)
+    self.last.next = self.next
+    self.next.last = self.last
+    return self.next
+end
+
+--- Double linked list bump for focus change
+-- @function [parent=#ui.server] bump
+-- @param #ui self
+-- @param #ui ui The ui to get bumped
+local function bump(self,ui)
+  if ui.next == nil then
+    ui.next = self
+    ui.last = self
+    self.next = ui
+    self.last = ui
+  else
+    if self.next then 
+    self:leave() end
+    self.next = ui
+    self.last = ui.last
+    ui.last.next = self
+    ui.last = self
+  end
+end
+
 local function initNativeUI(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
@@ -174,6 +216,8 @@ local function initNativeUI(term,name)
 --  label.ypos = h/2
   ui:add(label)
   ui:update()
+  ui.bump = bump
+  ui.leave = leave
   win.setVisible(false)
   return ui
 end
@@ -185,7 +229,7 @@ function Server.init(term,name)
   windows[ui] = true 
   
   --TODO reactor sends events to coroutine handlers
-  local o = {native = term, ui = ui,focus = ui,stack = {ui},
+  local o = {native = term, ui = ui,focus = ui,background = ui,
              windows=windows,events={},producer=Prod:new(),
              monitors={},parents={}
              }
@@ -208,8 +252,7 @@ local function newWindow(State,Co,w,h)
   ui.setTextScale = State.native.setTextScale
   State.windows[ui] = true --TODO window management?
   ui.redraw = function(self)
-    local Msg = gen_server.cast(Co,{"update",self})
---    if Msg ~= "ok" then error("Problem got: "..Msg) end
+    gen_server.cast(Co,{"update",self})
   end
   
   ui.redraw_sync = function(self)
@@ -217,7 +260,9 @@ local function newWindow(State,Co,w,h)
     if Msg ~= "ok" then error("Problem got: "..Msg) end
   end
   
-  table.insert(State.stack,ui)
+  ui.bump = bump
+  ui.leave = leave
+  ui:bump(State.focus)
   State.focus = ui 
   return ui
 end

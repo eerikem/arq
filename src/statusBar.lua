@@ -96,7 +96,6 @@ function Bar.handle_cast(Request,bar)
 end
 
 function Bar:write(msg)
---  self.ui:add(Graphic:new(msg))
   gen_server.cast(self.Co,{"message",msg})
 end
 

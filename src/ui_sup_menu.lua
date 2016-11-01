@@ -8,7 +8,7 @@ local ui_sup = require "ui_supervisor"
 local Client = {}
 
 function Client:new(Co)
-  local ui = ui_sup.newWindow(Co,11,10)
+  local ui = ui_sup.newWindow(Co,12,15)
   local l = List.fromArray(ui_sup.getUInames())
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)

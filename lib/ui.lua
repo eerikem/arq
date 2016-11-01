@@ -1,5 +1,15 @@
 local gen_server = require "gen_server"
-local ui_server = require "ui_server"
+local ui_server = require "src.ui_server"
+
+--- The UI Client Module
+-- An event handler for UI Client events
+-- @module UI
+-- @return lib.ui#UI
+
+--- UI Client State
+-- @type State
+-- @field lib.ui_lib#ui ui
+
 local UI = {}
 
 ----------------
@@ -14,7 +24,12 @@ function UI.handleEventSync(Co,...)
   gen_server.call(Co,{"handle",arg})
 end
 
---Returns co, ui
+--- Start a new UI Client
+-- @function [parent=#UI] start
+-- @param #string Co the terminal name
+-- @param #number w width
+-- @param #number h height
+-- @return lib.ui_lib#ui
 function UI.start(Co,w,h)
   local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running()},{})
   return UI.getUI(co)
@@ -24,6 +39,11 @@ function UI.getUI(Co)
   return gen_server.call(Co,{"ui"})
 end
 
+--- Add a new event handler to the UI reactor
+-- @function [parent=#UI] register
+-- @param #thread Co co of UI Client
+-- @param #string event
+-- @param #function handler
 function UI.register(Co,event,handler)
   gen_server.cast(Co,{"register",event,handler})
 end
@@ -50,6 +70,14 @@ function UI.handle_call(Request,From,State)
 	return State
 end
 
+--- @type Request
+-- @list <#number>
+
+---
+-- @function [parent=lib.ui#UI] handle_cast
+-- @param Request The event being handled
+-- @param #State State
+-- @return #State
 function UI.handle_cast(Request,State)
   local event = Request[1]
   --WARNING this event has dependant call in ui_server.lua
@@ -58,7 +86,11 @@ function UI.handle_cast(Request,State)
   elseif event == "register" then
     State.ui.reactor:register(Request[2],Request[3])
   else
-    error("Problem in UI module handle_cast"..event)
+    if State.ui.reactor:handling(Request[1]) then
+      State.ui.reactor:handleEvent(unpack(Request))
+    else
+      error("Problem in UI module handle_cast "..event)
+    end
   end
 	return State
 end

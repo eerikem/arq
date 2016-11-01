@@ -139,8 +139,9 @@ function Door.getState(door)
   return open,locked
 end
 
-function Door.subscribe(door)
-  gen_server.cast(door,{"subscribe",VM.running()})
+function Door.subscribe(door,co)
+  local co = co or VM.running()
+  gen_server.cast(door,{"subscribe",co})
 end
 ---------------
 --Server & UI--

@@ -2,6 +2,10 @@ local Reactor = {run = true}
 
 local reactorIndex = 0
 
+--- Initialize new Reactor object
+-- @function [parent=#lib.reactor] new
+-- @param #lib.reactor self
+-- @return #lib.reactor
 function Reactor:new(parent)
   if not parent then error("badarg, no parent",2) end
   local o = {handlers = {},parent=parent}
@@ -27,6 +31,14 @@ function Reactor:register(event,h)
   if not self.handlers[event] then
     self.handlers[event] = h
   else error("event: "..event.." already registered",2)
+  end
+end
+
+function Reactor:handling(event)
+  if self.handlers[event] then
+    return true
+  else
+    return false
   end
 end
 

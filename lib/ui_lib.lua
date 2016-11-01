@@ -1,9 +1,6 @@
 local Reactor = require 'lib.reactor'
 local Panel = require 'lib.ui_obj'
 
---- The terminal object
---@type term
-
 --- UI objects
 -- @type ui_obj
 
@@ -12,8 +9,9 @@ local Panel = require 'lib.ui_obj'
 
 --- The ui object
 -- @type ui
--- @field #term term The parent terminal
+-- @field lib.cc#term term The parent terminal
 -- @field #string type
+-- @field lib.ui_obj#Panel pane The UI's Panel object
 
 local UI = {}
 
@@ -21,14 +19,23 @@ local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
 local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
 local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
 
+---
+--@function [parent=#ui] beep
+--@param #ui self
 function UI:beep()
   exec(errorSound)
 end
 
+---
+--@function [parent=#ui] ping
+--@param #ui self
 function UI:ping()
   exec(selectSound)
 end
 
+---
+--@function [parent=#ui] tap
+--@param #ui self
 function UI:tap()
   exec(tapSound)
 end
@@ -83,7 +90,7 @@ function UI:draw(obj)
 end
 
 --- Add objects into the ui's panel
--- @function [parent=#ui]
+-- @function [parent=#ui] add
 -- @param #ui self
 -- @return #number The number of lines added to the panel
 function UI:add(...)
@@ -102,8 +109,12 @@ function UI:add(...)
   return n
 end
 
-function UI:remove(o)
-  self.pane:remove(o)
+---Remove a given object from the UI panel
+--@function [parent=#ui] remove
+--@param #ui self
+--@param #ui_obj obj
+function UI:remove(obj)
+  self.pane:remove(obj)
 end
 
 function UI:printCentered(str, ypos,n,noscroll)
@@ -132,15 +143,26 @@ function UI:indentLeft(str, indent, ypos,noscroll)
   return self:write(str,noscroll)
 end
 
+--- Set UI background color
+-- @function [parent=#ui] setBackground
+-- @param #ui self
+-- @param colors#color
 function UI:setBackground(color)
   self.pane.proto.background = color
 end
 
+--- Set UI text color
+-- @function [parent=#ui] setText
+-- @param #ui self
+-- @param colors#color
 function UI:setText(color)
-  if type(self) == "number" then error("got it",2) end
   self.pane.proto.textColor = color
 end
 
+--- Redraw the UI
+-- @function [parent=#ui] update
+-- @param #ui self
+-- @return #number The number of lines redrawn
 function UI:update()
 --  local back = term.getBackgroundColor()
   --if self.pane.proto.background then
@@ -164,6 +186,10 @@ function UI:update_sync()
   return self:redraw_sync()
 end
 
+--- Align the UI within the term.
+-- At most two options of: "center", "top", "bottom", "left", "right" 
+-- @function [parent=#ui] align
+-- @param #ui self
 function UI:align(...)
   local w,h = self.term.getSize()
   local x,y = self.term.getPosition()
@@ -294,6 +320,13 @@ function UI.lineWrap(sText,w,line,room)
   return line
 end
 
+--- Check whether coordinates intersect with UI.
+-- x and y are relative to the term
+-- @function [parent=#ui] onMe
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @return #boolean
 function UI:onMe(x,y)
   local xpos,ypos = self.term.getPosition()
   local w,h = self.term.getSize()
@@ -304,6 +337,14 @@ function UI:onMe(x,y)
   end
   return false
 end
+
+--- Add a ui_obj to receive user interactions.
+-- WARNING this functionality in progress.
+-- Events and objects must be one to one.
+-- @function [parent=#ui] register
+-- @param #ui self
+-- @param #ui_obj
+-- @param #string event
 
 --TODO better UI registering of events
 --handle conflicts?!? registering and deregistering?!?
@@ -339,6 +380,13 @@ function UI:register(obj,event)
   end
 end
 
+
+--- Translate coordinates from term so relative to UI.
+-- @function [parent=#ui] relativeXY
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @return #number, #number
 function UI:relativeXY(x,y)
   local xpos,ypos = self.term.getPosition()
   y = y - ypos + 1
@@ -346,6 +394,8 @@ function UI:relativeXY(x,y)
   return x,y
 end
 
+--Register UI event handlers that forward mouse
+--events to the corresponding SELECTABLE panel objects
 function UI:registerUIListeners()
   local clickDown
   local function clickHandler(event,id,button,x,y)
@@ -354,7 +404,6 @@ function UI:registerUIListeners()
       return VM.log("Mouse up "..id.." from unrelated mouse down.")  
     end
     x,y = self:relativeXY(x,y)
---    VM.log("UI "..self.pane.id.." reactor got "..table.concat({id,button,x,y}," "))
     for obj,_ in pairs(self.selectables) do
       if obj:onMe(x,y) and obj.reactor.run then
         return obj.reactor:handleEvent(event,button,x,y)
@@ -366,10 +415,7 @@ function UI:registerUIListeners()
     x,y = self:relativeXY(x,y)
     for obj,_ in pairs(self.selectables) do
       if obj:onMe(x,y) and obj.reactor.run then
---        VM.log("touch on ui "..obj.id.." "..x.." "..y)
         return obj.reactor:handleEvent(event,x,y)
-      else
---        VM.log("touch not on me")
       end
     end
   end
@@ -379,5 +425,4 @@ function UI:registerUIListeners()
   self.reactor:register("monitor_touch",touchHandler)
 end
 
-local ui = UI:new(term)
 return UI

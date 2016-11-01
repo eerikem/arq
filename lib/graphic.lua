@@ -1,6 +1,14 @@
 local Reactor = require 'lib.reactor'
 local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0,lastClick=-1}
 
+
+---@field [parent=#lib.graphic] lib.reactor#lib.reactor reactor
+
+--- Initialize new Graphic object
+-- @function [parent=#lib.graphic] new
+-- @param #lib.graphic self
+-- @param #string o Text to be displayed
+-- @return lib.graphic#lib.graphic
 function Graphic:new(o)
   if type(o)=="string" then
   o = {text = o,width = string.len(o)} end

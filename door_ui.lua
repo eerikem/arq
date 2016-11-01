@@ -9,7 +9,6 @@ local DoorUI = {}
 --UI.start pulls UI gen_server from ui_server
 --Add eventHandlers with UI.register
 --Send events with UI.handleEvent|handleEventSync
-
 function DoorUI.new(monCo,door)
   local ui = UI.start(monCo,7,5)
   local title = Graphic:new(door.title)
@@ -26,7 +25,6 @@ function DoorUI.new(monCo,door)
   body:add(open)
   body:add(status)
   ui:add(body)
-  
   close.reactor:stop()
   
   --TODO Remove Duplicate Hacks
@@ -98,7 +96,6 @@ function DoorUI.new(monCo,door)
   close:setOnSelect(ui,handler(VM.running(),close.reactor))
   ui.reactor:register("closed",closeHandler)
   ui.reactor:register("opened",openHandler)
-  
   
   local function bright()
     ui:setBackground(colors.lightGray)

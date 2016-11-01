@@ -40,6 +40,22 @@ function Status.start(doorCo,monitor)
 --  bright()
   ui:update()
   
+  local function openedHandler()
+    body:remove(lockdown)
+    ui:update()
+  end
+  
+  local function closedHandler()
+    if not ui.pane.content[lockdown] then
+      body:add(lockdown)
+      ui:update()
+    end
+  end
+  
+  UI.register(ui.co,"opened",openedHandler)
+  UI.register(ui.co,"closed",closedHandler)
+  
+  Door.subscribe(doorCo,ui.co)
   
   
 end

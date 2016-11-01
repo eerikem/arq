@@ -4,8 +4,14 @@ local UI = require 'lib.ui_lib'
 local Reactor = require 'lib.reactor'
 local Prod = require 'lib.producer'
 local Graphic = require 'lib.graphic'
-local Server = {}
 
+
+
+--- Server for managing terminal events and ui's
+-- @module ui.server
+-- @return src.ui_server#ui.server
+
+local Server = {}
 
 local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
 
@@ -13,7 +19,9 @@ local function beep()
   exec(errorSound)
 end
 
-
+--- Start new Terminal Server
+-- @function [parent=#ui.server] start_link
+-- @param lib.ui_lib#term
 function Server.start_link(term,termName)
   return gen_server.start_link(Server,{term,termName},{})
 end
@@ -291,11 +299,17 @@ function Server.listen(Co,event,co)
   gen_server.cast(Co,{"register",event,co})
 end
 
+--- Request a new UI object from server
+-- @function [parent=#ui.server] newWindow
+-- @param #string Co the name of the term
+-- @param #number w width
+-- @param #number h height
+-- @param #thread Parent The parent coroutine to monitor in case of crashes
+-- @return lib.ui_lib#ui
 function Server.newWindow(Co,w,h,Parent)
   --TODO handle requests to bad monitors
   local ui = gen_server.call(Co,{"new_window",w,h,Parent})
   return ui
 end
-
 
 return Server

@@ -1,4 +1,4 @@
-local Panel, List = require 'ui_obj'
+local Panel, List = require 'lib.ui_obj'
 
 local menuIndex = 0
 

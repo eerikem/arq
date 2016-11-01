@@ -1,7 +1,7 @@
 local gen_server = require "gen_server"
 local statusBar = require "statusBar"
 local ui_server = require "ui_server"
-local Reactor = require "reactor"
+local Reactor = require "lib.reactor"
 
 local Server = {}
 

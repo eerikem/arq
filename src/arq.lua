@@ -25,7 +25,8 @@ function exec(cmd,...)
 end
 
 EVE = require 'eventListener'
-UI = require 'ui_lib'
+--TODO is this necessary?
+UI = require 'lib.ui_lib'
 
 -----------
 --Run ARQ--
@@ -47,6 +48,7 @@ local Door = require "door"
 local Manager = require "door_manager"
 local Password = require "password"
 local ARQ_lab = require "arq_lab"
+local status_ui = require "status_ui"
 
 VM.init()
 
@@ -60,9 +62,14 @@ uiMenu:new("terminal")
 --Elevator.start()
 --Password.start(123,"terminal",{{fun=function(str)VM.log(str)end},"fun",{"Password success."}})
 --Airlock.start()
+
+local silo = Door.startMonitorDoor(colors.yellow,"monitor_111","monitor_112","Lab 102",nil,"123")
+--status_ui.start(silo,"monitor_110")
+local ok,str = pcall(status_ui.start,silo,"monitor_110")
+if not ok then VM.log(str) end
+--status_ui.start(silo,"monitor_109")
 local doors = {
---  Door.startMonitorDoor(colors.yellow,"monitor_111","monitor_112","Lab 102",nil,"123"),
-  Door.startMonitorDoor(colors.yellow,"terminal","monitor_112","Lab 102",nil,"123"),
+  silo,
   Door.startFakeDoor("monitor_116","Lab 103"),
   Door.startFakeDoor("monitor_118","Lab 101")
 --Door.startFakeDoor("monitor_3","DENIED")

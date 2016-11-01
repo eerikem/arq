@@ -7,6 +7,9 @@ local require = function(name)
     error("Expected filename",2)
   end
   
+  name = string.gsub(name,"%.lua$","")
+  name = string.gsub(name,"%.","/")
+  
   local ENV = getfenv(2)
   local loadedFiles = ENV.loadedFiles or {}
   ENV.loadedFiles = loadedFiles

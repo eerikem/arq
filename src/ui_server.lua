@@ -1,9 +1,9 @@
 
 local gen_server = require 'gen_server'
-local UI = require 'ui_lib'
-local Reactor = require 'reactor'
-local Prod = require 'producer'
-local Graphic = require 'graphic'
+local UI = require 'lib.ui_lib'
+local Reactor = require 'lib.reactor'
+local Prod = require 'lib.producer'
+local Graphic = require 'lib.graphic'
 local Server = {}
 
 
@@ -154,6 +154,10 @@ local function initNativeUI(term,name)
   local w,h = term.getSize()
   local win = window.create(term,1,1,w,h)
   local ui = UI:new(win)
+  
+  if peripheral.getType(name) == "monitor" then
+    ui.setTextScale = term.setTextScale end
+  
   ui.name = name
   ui:setBackground(colors.black)
   ui:setText(colors.lightGray)
@@ -193,6 +197,7 @@ local function newWindow(State,Co,w,h)
   local ui = UI:new(window.create(State.native,1,1,w,h))
   ui.term.setVisible(false)
   ui.native = State.native
+  ui.setTextScale = State.native.setTextScale
   State.windows[ui] = true --TODO window management?
   ui.redraw = function(self)
     local Msg = gen_server.cast(Co,{"update",self})

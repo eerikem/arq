@@ -1,9 +1,9 @@
 local gen_server = require "gen_server"
-local UI = require "ui"
-local Bundle = require "bundle"
-local Graphic = require "graphic"
-local Panel = require "ui_obj"
-local Menu = require 'ui_menu'
+local UI = require "lib.ui"
+local Bundle = require "lib.bundle"
+local Graphic = require "lib.graphic"
+local Panel = require "lib.ui_obj"
+local Menu = require 'lib.ui_menu'
 
 local SILO_DELAY = 5
 
@@ -128,7 +128,7 @@ local function close(door)
 end
 
 local function alarmPanel(Co)
-  local co, ui = UI.start(Co,7,5)
+  local ui = UI.start(Co,7,5)
   local title = Graphic:new("ALARM")
   local button = Graphic:new("Trigger")
   local body = Panel:new()
@@ -185,7 +185,7 @@ local function disable(panel,index)
 end
 
 local function initUI()
-  local co, ui = UI.start("terminal",20,8)
+  local ui = UI.start("terminal",20,8)
   ui:align("center","right")
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)

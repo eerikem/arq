@@ -1,7 +1,7 @@
 local ui_server = require 'ui_server'
 local gen_server = require 'gen_server'
-local Reactor = require 'reactor'
-local Graphic = require 'graphic'
+local Reactor = require 'lib.reactor'
+local Graphic = require 'lib.graphic'
 
 local Bar = {buffer = 512,line = 1}
 

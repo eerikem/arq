@@ -1,7 +1,7 @@
 local Observer = require "observer"
-local Graphic = require "graphic"
-local Menu = require "ui_menu"
-local Panel, List = require "ui_obj"
+local Graphic = require "lib.graphic"
+local Menu = require "lib.ui_menu"
+local Panel, List = require "lib.ui_obj"
 local ui_sup = require "ui_supervisor"
 
 
@@ -13,7 +13,7 @@ function Client:new(Co)
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
   local t = Graphic:new("UI List")
-  t.align="center"
+  t:align("center")
   t.ypos = 2
   local body = Panel:new()
   body.width = "max"

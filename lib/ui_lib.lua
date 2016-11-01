@@ -1,5 +1,19 @@
-local Reactor = require 'Reactor'
-local Panel = require 'ui_obj'
+local Reactor = require 'lib.reactor'
+local Panel = require 'lib.ui_obj'
+
+--- The terminal object
+--@type term
+
+--- UI objects
+-- @type ui_obj
+
+--- The ui module.
+-- @module UI
+
+--- The ui object
+-- @type ui
+-- @field #term term The parent terminal
+-- @field #string type
 
 local UI = {}
 
@@ -19,18 +33,35 @@ function UI:tap()
   exec(tapSound)
 end
 
+--- Initialize a new ui
+-- @function [parent=#UI] new
+-- @param self
+-- @param #term term the parent terminal
+-- @return #ui
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {type="ui",pane = Panel:new(),term = term,selectables={},redraw = term.redraw}
+  local o = {
+    type="ui",
+    pane = Panel:new(),
+    term = term,
+    selectables={},
+    redraw = term.redraw}
   o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self
-  
   o:registerUIListeners()
   return o
 end
 
+--- Create a new ui whose term is a window of the current ui.
+-- @function [parent=#ui] newWindow
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @param #number w
+-- @param #number h
+-- @return #ui
 function UI:newWindow(x,y,w,h,visible)
   assert(x and y and w and h,'Four parameters expected')
   local t
@@ -51,6 +82,10 @@ function UI:draw(obj)
   return obj:redraw(self)
 end
 
+--- Add objects into the ui's panel
+-- @function [parent=#ui]
+-- @param #ui self
+-- @return #number The number of lines added to the panel
 function UI:add(...)
   local n = 0 
   for _,obj in ipairs(arg) do
@@ -344,4 +379,5 @@ function UI:registerUIListeners()
   self.reactor:register("monitor_touch",touchHandler)
 end
 
+local ui = UI:new(term)
 return UI

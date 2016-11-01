@@ -10,10 +10,14 @@ function UI.handleEvent(Co,...)
   gen_server.cast(Co,{"handle",arg})
 end
 
+function UI.handleEventSync(Co,...)
+  gen_server.call(Co,{"handle",arg})
+end
+
 --Returns co, ui
 function UI.start(Co,w,h)
   local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running()},{})
-  return co, UI.getUI(co)
+  return UI.getUI(co)
 end
 
 function UI.getUI(Co)
@@ -32,6 +36,7 @@ function UI.init(Co,w,h,Parent)
   local ui = ui_server.newWindow(Co,w,h,Parent)
   local co = VM.running()
   ui.handle = function(...)UI.handleEvent(co,...)end
+  ui.co = co
   return true, {ui = ui}
 end
 
@@ -39,6 +44,8 @@ function UI.handle_call(Request,From,State)
   local event = Request[1]
   if event == "ui" then
     gen_server.reply(From,State.ui)
+  elseif event == "handle" then
+    gen_server.reply(From,State.ui.reactor:handleEvent(unpack(Request[2])))
   end
 	return State
 end

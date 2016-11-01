@@ -1,7 +1,7 @@
 local ui_server = require 'ui_server'
 local gen_server = require 'gen_server'
-local Panel = require "ui_obj"
-local Graphic = require "graphic"
+local Panel = require "lib.ui_obj"
+local Graphic = require "lib.graphic"
 local Server = {}
 
 function Server.submit(Co)

@@ -36,7 +36,7 @@ Menu = require 'ui_menu'
 Radio = require 'ui_radio_panel'
 
 local TITLE = Graphic:new("Title")
-TITLE.align = "center"
+TITLE:align("center")
 TITLE:setBackgroundColor(colors.lightGray)
 TITLE:setTextColor(colors.gray)
 
@@ -100,7 +100,7 @@ end
 
 function test_list()
   local l = List.fromArray({"Item1","Item2","Item3"})
-  l.align = "center" --todo Panel alignment
+  l:align("center") --todo Panel alignment
   l:setTextColor(colors.orange)
   ui:add(TITLE)
   ui:add(l)
@@ -206,7 +206,7 @@ function test_drawLine()
   local ui = UI:new(window.create(term.current(),1,1,width,9))
   ui:setBackground(colors.lightGray)
   local t = Graphic:new("TEST DRAWLINE")
-  t.align = "center"
+  t:align("center")
   t:setTextColor(colors.red)
   ui:add(t)
   ui:add(Graphic:new("First line is here"))
@@ -493,7 +493,7 @@ function test_managerUI()
   ui:setText(colors.gray)
   
   local title = Graphic:new("Access Control")
-  title.align = "center"
+  title:align("center")
 --  validatePos(title,1,1)
   local body = Panel:new()
   body:setLayout("static")

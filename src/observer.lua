@@ -1,9 +1,9 @@
-local luaunit = require 'luaunit'
+local luaunit = require 'lib.luaunit'
 local gen_server = require 'gen_server'
-local Graphic = require 'graphic'
+local Graphic = require 'lib.graphic'
 local ui_sup = require 'ui_supervisor'
-local Panel, List = require 'ui_obj'
-local Menu = require "ui_menu"
+local Panel, List = require 'lib.ui_obj'
+local Menu = require "lib.ui_menu"
 
 local Client = {}
 
@@ -97,7 +97,7 @@ function Client.observerUI(Co)
   infoPanel:setTextColor(colors.lightGray)
   
   local t = Graphic:new("Observer")
-  t.align="center"
+  t:align("center")
   t:setBackgroundColor(colors.gray)
   t:setTextColor(colors.lightGray)
   

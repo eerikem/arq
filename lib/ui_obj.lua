@@ -1,5 +1,5 @@
-local Reactor = require 'reactor'
-local Graphic = require 'graphic'
+local Reactor = require 'lib.reactor'
+local Graphic = require 'lib.graphic'
 local panelIndex = 0
 local protoIndex = 0
 local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0,noscroll = false}
@@ -148,7 +148,7 @@ function proto:write(ui,noscroll)
       ui.term.setCursorPos(x,h)
     end
   end
-  if self.align == "center" then
+  if self:alignment() == "center" then
     counter = ui:printCentered(self.text,y,0,noscroll)
   else
     counter = ui:write(self.text,noscroll)

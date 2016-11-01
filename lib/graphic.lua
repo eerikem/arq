@@ -1,4 +1,4 @@
-local Reactor = require 'reactor'
+local Reactor = require 'lib.reactor'
 local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0,lastClick=-1}
 
 function Graphic:new(o)
@@ -72,7 +72,11 @@ function Graphic:getTextFromLine(line,width)
 end
 
 function Graphic:align(pos)
-  self.align = pos
+  self.myAlignment = pos
+end
+
+function Graphic:alignment()
+  return self.myAlignment
 end
 
 function Graphic:onMe(x,y)

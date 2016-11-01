@@ -1,11 +1,11 @@
 local gen_server = require "gen_server"
 local ui_server = require "ui_server"
 local Door = require "door"
-local Graphic = require "graphic"
-local Panel = require "ui_obj"
+local Graphic = require "lib.graphic"
+local Panel = require "lib.ui_obj"
 local Server = {}
-local luaunit = require "luaunit"
-local Menu = require "ui_menu"
+local luaunit = require "lib.luaunit"
+local Menu = require "lib.ui_menu"
 
 local checkup
 
@@ -90,7 +90,7 @@ end
 local function managerUI(Co)
   local ui = ui_server.newWindow(Co,22,8)
   local title = Graphic:new("Access Control")
-  title.align = "center"
+  title:align("center")
   title.ypos = 2
   local body = Panel:new()
   body:setLayout("static")

@@ -1,8 +1,8 @@
 local gen_server = require "gen_server"
-local UI = require "ui"
-local Bundle = require "bundle"
-local Graphic = require "graphic"
-local Panel = require "ui_obj"
+local UI = require "lib.ui"
+local Bundle = require "lib.bundle"
+local Graphic = require "lib.graphic"
+local Panel = require "lib.ui_obj"
 local Password = require "password"
 
 local CABLE_SIDE = "back"
@@ -151,9 +151,7 @@ function Door.start_link(properties)
 end
 
 local function doorUI(Co,door)
-  local ui_co, ui = UI.start(Co,7,5)
-  ui.co = ui_co
-  ui.handle = function(...)UI.handleEvent(ui_co,...)end
+  local ui = UI.start(Co,7,5)
   local title = Graphic:new(door.title)
   local body = Panel:new()
   local open = Graphic:new("OPEN")

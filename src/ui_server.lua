@@ -135,6 +135,22 @@ local function resized(_,State)
   return State
 end
 
+local shiftDown = false
+
+local function shiftFocusRight(State)
+  local ui = State.background.last
+  ui:bump(State.focus)
+  State.focus = ui 
+  redrawStack(State,State.focus)
+end
+
+local function shiftFocusLeft(State)
+  local ui = State.focus.next
+  ui:bump(State.focus)
+  State.focus = ui
+  redrawStack(State,State.focus)
+end
+
 local UI_Events = {
   char = function(Req,State)
     handle(Req,State)
@@ -144,12 +160,24 @@ local UI_Events = {
     local _,keycode,helddown = unpack(Req)
     local msg = keys.getName( keycode )
     if helddown then msg = msg.." down at UI_Server" end
-    handle(Req,State)
+    if keycode == 15 then
+      if shiftDown then
+        shiftFocusLeft(State)
+      else
+        shiftFocusRight(State)
+      end
+    elseif keycode == 42 then
+      shiftDown = true
+    else
+      handle(Req,State)
+    end
     return State 
     end,
   key_up = function(Req,State)
     local _,keycode = unpack(Req)
-    if not keys.getName( keycode ) then
+    if keycode == 42 then
+      shiftDown = false
+    elseif not keys.getName( keycode ) then
       VM.log(keycode.." up at UI_Server")
     else
       VM.log(keys.getName( keycode ).." up at UI_Server")

@@ -39,7 +39,7 @@ local function msgHandler(Bar)
     local n = 0
     if string.find(string.lower(str),'error') then
 -- Uncomment to catch silent errors.
---    error(str)
+    error(str)
       n = Bar.ui:add(Graphic:new({text = MSG_CNT.." "..str,textColor=colors.red}))
     else
       n = Bar.ui:add(Graphic:new(MSG_CNT.." "..str))

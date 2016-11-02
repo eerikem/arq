@@ -28,7 +28,7 @@ function Door.new(cable,time,detector)
     door_delay = time or 5,
     doorCable = cable,
     detector = detector
-    }
+  }
   local ok, Co = Door.start_link(properties)
   return Co
 end
@@ -49,7 +49,7 @@ function Door.newCargo(open,close,time,detector)
     detector = detector,
     openCable = open,
     closeCable = close
-    }
+  }
   local ok, Co = Door.start_link(properties)
   return Co
 end
@@ -57,8 +57,8 @@ end
 ---
 -- @function [parent=#door] newUI
 -- @param #string monitor
--- @param #string title 
--- @param #thread door to subscribe to 
+-- @param #string title
+-- @param #thread door to subscribe to
 -- @param #string password optional
 -- @return #thread
 function Door.newUI(monitor,title,door,password)
@@ -110,6 +110,14 @@ function Door.subscribe(door,co)
   if not door then error("badarg",2) end
   local co = co or VM.running()
   gen_server.cast(door,{"subscribe",co})
+end
+
+function Door.denyAccess(doorUI)
+  gen_server.cast(doorUI,{"denyAccess"})
+end
+
+function Door.allowAccess(doorUI)
+  gen_server.cast(doorUI,{"allowAccess"})
 end
 ---------------
 --Server & UI--
@@ -211,7 +219,7 @@ local function cargoClose(State)
   notify(State,"closed")
   State.closing = true
   State.open = false
-  
+
   local fun = function()
     State.closeCable:disable()
     State.closing = false
@@ -277,13 +285,16 @@ function Door.init(props)
     opening = false,
     closing = false,
     closed=true
-    }
-  
+  }
+
   for k,v in pairs(props) do
     State[k]=v
   end
-  
+
   initCables(State)
+  if State.detector then
+    EVE.subscribe("redstone")
+  end
   return true, State
 end
 
@@ -304,7 +315,7 @@ function Door.handle_call(Request,From,State)
     else
       gen_server.reply(From,"closed")
       close(State)
-      if State.timer then
+      if State.timer and State.type == "normal" then
         VM.send(State.timer,"cancel") end
     end
   elseif event == "get" then
@@ -326,7 +337,9 @@ function Door.handle_cast(Request,State)
         if not State.open then
           open(State)
         else
-          if State.timer then VM.send(State.timer,"reset")end
+          if State.timer and State.type == "normal" then
+            VM.send(State.timer,"reset")
+          end
         end
         State.alreadyOn = true
       end
@@ -343,7 +356,7 @@ function Door.handle_cast(Request,State)
     lock(State)
   elseif event == "unlock" then
     unlock(State)
-    if State.open and not State.timer then
+    if State.open and not State.timer and State.type == "normal" then
       setTimer(State)
     end
   elseif event == "subscribe" then

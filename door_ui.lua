@@ -78,6 +78,7 @@ function DoorUI.start_link(monitor,title,door,Door,password)
       ui:tap()
     end
     
+    local denyAccess = false
     local function deny()
       ui:beep()
       status.text="Denied!"
@@ -87,6 +88,9 @@ function DoorUI.start_link(monitor,title,door,Door,password)
     
     local function handler(door,reactor)
       return function()
+        if denyAccess then
+          return deny()
+        end
         if reactor.parent == open then
           if password then
             return Password.start(password,monitor,
@@ -138,6 +142,14 @@ function DoorUI.start_link(monitor,title,door,Door,password)
       cancel()
     end
     
+    local function accessHandler(event)
+      if event == "denyAccess" then
+        denyAccess = true
+      elseif event == "allowAccess" then
+        denyAccess = false
+      end
+    end
+    
     if door then
       open:setOnSelect(ui,handler(door,open.reactor))
       close:setOnSelect(ui,handler(door,close.reactor))
@@ -145,6 +157,8 @@ function DoorUI.start_link(monitor,title,door,Door,password)
       ui.reactor:register("opened",openHandler)
       ui.reactor:register("deny",denyHandler)
       ui.reactor:register("canceled",cancelHandler)
+      ui.reactor:register("denyAccess",accessHandler)
+      ui.reactor:register("allowAccess",accessHandler)
     else
       open:setOnSelect(ui,denyHandler)
     end

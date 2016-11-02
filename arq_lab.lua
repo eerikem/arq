@@ -140,7 +140,7 @@ local function initUI()
   menu.width = "max"
   
   menu:add(lights)
-  menu:add(close)
+  menu:add(open)
   menu:add(alarmOn)
   menu:add(resetPanels)
   menu:link(ui)
@@ -187,15 +187,17 @@ function Lab.handle_cast(Request,State)
     cables.emergency:disable()
     State.ui.disabledAlarm()
   elseif event == "open_silo" then
-    if State.silo.closed or State.silo.closing then
-      open(State.silo)
-      State.ui.openedSilo()
-    end
+    Door.open(State.silo)
+    State.ui.openedSilo()
   elseif event == "close_silo" then
-    if State.silo.open or State.silo.opening then
-      close(State.silo)
-      State.ui.closedSilo()
-    end
+    Door.close(State.silo)
+    State.ui.closedSilo()
+  elseif event == "opened" then
+    State.ui.openedSilo()
+    Door.allowAccess(State.siloAccess)
+  elseif event == "closed" then
+    State.ui.closedSilo()
+    Door.denyAccess(State.siloAccess)
   end
   return State
 end
@@ -204,22 +206,29 @@ function Lab.init()
   
   
   local silo = Door.newCargo(cables.open_silo,cables.close_silo,SILO_DELAY)
-  Door.newUI("monitor_111","Lab 102",silo)
-  local siloAccess = Door.newUI("monitor_112","Lab 102",silo,"123")
+  local hallway = Door.new(cables.silo_doors,8)
+  local hallAccess = Door.newUI("monitor_111","Lab 102",hallway)
+  local siloAccess = Door.newUI("monitor_112","Lab 102",hallway,"123")
+  Door.denyAccess(siloAccess)
   status_ui.start(silo,"monitor_110")
 --status_ui.start(silo,"monitor_109")
 
+  Door.subscribe(silo)
+
+  local storage = Door.new(cables.storage,5,cables.storage_sensor)
+  Door.newUI("monitor_120","Storage",storage,"123")
   local doors = {
     silo,
     Door.newUI("monitor_116","Lab 103"),
     Door.newUI("monitor_118","Lab 101"),
-    Door.new(cables.storage,cables.storage_sensor)
+    Door.new(cables.storage,cables.storage_sensor),
+    storage
   }
 
   local ui = initUI()
   local panel1 = alarmPanel("monitor_114")
   local panel2 = alarmPanel("monitor_115")
-  return true, {ui = ui,silo = door}
+  return true, {ui = ui,silo = silo,siloAccess = siloAccess,hallAccess=hallAccess}
 end
 
 return Lab

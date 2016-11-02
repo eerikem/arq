@@ -41,12 +41,14 @@ function Status.start(doorCo,monitor)
   ui:update()
   
   local function openedHandler()
-    body:remove(lockdown)
-    ui:update()
+    if body:contains(lockdown) then
+      body:remove(lockdown)
+      ui:update()
+    end
   end
   
   local function closedHandler()
-    if not ui.pane.content[lockdown] then
+    if not body:contains(lockdown) then
       body:add(lockdown)
       ui:update()
     end

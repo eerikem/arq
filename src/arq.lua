@@ -49,7 +49,7 @@ local Manager = require "door_manager"
 local Password = require "password"
 local ARQ_lab = require "arq_lab"
 local status_ui = require "status_ui"
-
+local door_ui = require "door_ui"
 VM.init()
 
 supervisor.start_link(arqSup,{},"arq_sup")
@@ -65,6 +65,8 @@ uiMenu:new("terminal")
 
 local silo = Door.startMonitorDoor(colors.yellow,"monitor_111","monitor_112","Lab 102",nil,"123")
 --status_ui.start(silo,"monitor_110")
+local ok,str = pcall(door_ui.start_link,"terminal",{title="Test"},silo,Door,"123")
+if not ok then VM.log(str) end
 local ok,str = pcall(status_ui.start,silo,"monitor_110")
 if not ok then VM.log(str) end
 --status_ui.start(silo,"monitor_109")

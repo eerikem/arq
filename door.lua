@@ -1,9 +1,11 @@
 local gen_server = require "gen_server"
+local ui_server = require "ui_server"
 local UI = require "lib.ui"
 local Bundle = require "lib.bundle"
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 local Password = require "password"
+local doorUI = require "door_ui"
 
 local CABLE_SIDE = "back"
 
@@ -151,111 +153,6 @@ function Door.start_link(properties)
   return gen_server.start_link(Door,{properties},{})
 end
 
-local function doorUI(Co,door)
-  local ui = UI.start(Co,7,5)
-  local title = Graphic:new(door.title)
-  local body = Panel:new()
-  local open = Graphic:new("OPEN")
-  local close = Graphic:new("CLOSE")
-  local status = Graphic:new("       ")
-  body.width = "max"
-  open.xpos = 2
-  open.ypos = 2
-  close.xpos = 2
-  close.ypos = 2
-  ui:add(title)
-  body:add(open)
-  body:add(status)
-  ui:add(body)
-  
-  close.reactor:stop()
-  
-  --TODO Remove Duplicate Hacks
-  local function enable(button2)
-    local button1 = body.index[1]
-    if button1 ~= button2 then
-      body:replace(button1,button2)
-      button1.reactor:stop()
-      button2.reactor:start()
-      ui:update()
-    end
-    return button1
-  end
-  
-  local lastDenied = nil
-  local denyTime
-  local flashDenied = function()
-        EVE.sleep(denyTime or 1)
-        denyTime = nil
-        if lastDenied == VM.running() then
-          status.text="       "
-          ui:update()
-          lastDenied = nil
-        end
-      end
-  
-  local function handler(door,reactor)
-    return function()
-      if reactor.parent == open then
-        local res, time = Door.open(door)
-        denyTime = time
-        if res == "opened" then
-          ui:ping()
-          enable(close)
-        elseif res == "canceled" then
-          VM.log("received Canceled")
-          ui:tap()
-        else
-          ui:beep()
-          status.text="Denied!"
-          ui:update()
-          lastDenied = VM.spawn(flashDenied)
-        end
-      elseif reactor.parent == close then
-        local res, time = Door.close(door)
-        denyTime = time
-        if res == "closed" then
-          ui:ping()
-          enable(open)
-        else
-          ui:beep()
-          status.text="Denied!"
-          ui:update()
-          lastDenied = VM.spawn(flashDenied)
-        end
-      end
-    end
-  end
-  
-  local function closeHandler()
-    enable(open)
-  end
-  
-  local function openHandler()
-    enable(close)
-  end
-  
-  open:setOnSelect(ui,handler(VM.running(),open.reactor))
-  close:setOnSelect(ui,handler(VM.running(),close.reactor))
-  ui.reactor:register("closed",closeHandler)
-  ui.reactor:register("opened",openHandler)
-  
-  
-  local function bright()
-    ui:setBackground(colors.lightGray)
-    ui:setText(colors.gray)
-    body:setTextColor(colors.orange)
-    body:setBackgroundColor(colors.gray)
-    status:setTextColor(colors.red)
-  end
-  
-  bright()
-  ui:update()
-  
-  return ui
-end
-
-
 local function delay(door,State)
   local Ref = EVE.timer(State.door_delay)
   while true do
@@ -278,7 +175,6 @@ end
 
 local function notify(State,event)
   for Co,_ in pairs(State.subscribers) do
-    VM.log("Sending "..event.." to "..tostring(Co))
     gen_server.cast(Co,{event,VM.running()})
   end
 end
@@ -301,18 +197,24 @@ end
 
 local function close(State)
   State.open = false
-  if State.door then State.door:disable() end
-  if State.locked then
-    notify(State,"locked")
-  else
-    notify(State,"closed")
-  end
+  State.door:disable()
+  notify(State,"closed")
+end
+
+local function lock(State)
+  State.locked = true
+  notify(State,"locked")
+end
+
+local function unlock(State)
+  State.locked = false
+  notify(State,"unlocked")
 end
 
 function Door.init(props)
   
-  local uis = {outer=doorUI(props.outer,props)}
-  if props.inner then uis.inner=doorUI(props.inner,props) end
+  local uis = {outer=doorUI.start_link(props.outer,props,VM.running(),Door)}
+  if props.inner then uis.inner=doorUI.start_link(props.inner,props,VM.running(),Door) end
   local State = {
     uis = uis,
     title = props.title,
@@ -338,48 +240,15 @@ function Door.handle_call(Request,From,State)
     if not force and State.locked or not State.door then
       gen_server.reply(From,"denied")
     else
-      if State.password and not force then
-        local mon = From[1]
-        VM.log("from: "..tostring(mon))
-        VM.log("outer ui co: "..tostring(State.uis.outer.co))
-        if State.uis.inner then
-          VM.log("inner ui co: "..tostring(State.uis.inner.co)) end
-        if mon == State.uis.outer.co then
-          mon = State.outer
-        else
-          mon = State.inner
-        end
-        local Mod = {
-          success = function (door,From)
-            if State.locked then
-              gen_server.reply(From,"denied",2)
-            else
-              Door.forceOpen(door)
-              gen_server.reply(From,"opened")
-            end
-          end,
-          canceled = function (From)
-            gen_server.reply(From,"canceled")
-          end
-        }
-        Password.start(State.password,mon,
-          {Mod,"success",{VM.running(),From}},
-          {Mod,"canceled",{From}})
-        return State --TODO handle waiting for password
-      end
       gen_server.reply(From,"opened")
-      if State.inner then State.uis.inner.handle("opened") end
-      State.uis.outer.handle("opened")
       open(State)
     end
   elseif event == "close" then
     local force = Request[2]
-    if State.locked and not force then
+    if State.locked and not force or not State.door then
       gen_server.reply(From,"denied")
     else
       gen_server.reply(From,"closed")
-      if State.inner then State.uis.inner.handle("closed") end
-      State.uis.outer.handle("closed")
       close(State)
       if State.timer then
         VM.send(State.timer,"cancel") end
@@ -402,8 +271,6 @@ function Door.handle_cast(Request,State)
       if not State.alreadyOn then
         if not State.open then
           open(State)
-          State.uis.outer.handle("opened")
-          if State.inner then State.uis.inner.handle("opened") end
         else
           if State.timer then VM.send(State.timer,"reset")end
         end
@@ -416,18 +283,12 @@ function Door.handle_cast(Request,State)
   elseif event == "close" then
     --"Close signal from timer."
     if not State.locked then
-      State.uis.outer.handle("closed")
-      if State.inner then State.uis.inner.handle("closed") end
       close(State)
     end
   elseif event == "lock" then
-    State.locked = true
-    notify(State,"locked")
-    --not automatically closing when locked
-    --close(State)
+    lock(State)
   elseif event == "unlock" then
-    State.locked = false
-    notify(State,"unlocked")
+    unlock(State)
     if State.open and not State.timer then
       setTimer(State)
     end

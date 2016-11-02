@@ -125,6 +125,7 @@ local function redrawStack(State,ui)
   end
 end
 
+--TODO adjust to new double linked list
 local function resized(_,State)
   VM.log(State.ui.name.." resized")
   for _,UI in ipairs(State.stack) do
@@ -168,6 +169,10 @@ local UI_Events = {
       end
     elseif keycode == 42 then
       shiftDown = true
+    elseif keycode == 63 then
+      redrawStack(State)
+      VM.log("Refreshed full stack")
+      return State
     else
       handle(Req,State)
     end

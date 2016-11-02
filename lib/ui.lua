@@ -4,7 +4,6 @@ local ui_server = require "src.ui_server"
 --- The UI Client Module
 -- An event handler for UI Client events
 -- @module UI
--- @return lib.ui#UI
 
 --- UI Client State
 -- @type State
@@ -24,15 +23,19 @@ function UI.handleEventSync(Co,...)
   gen_server.call(Co,{"handle",arg})
 end
 
---- Start a new UI Client
+--- Start and link a new UI Client
 -- @function [parent=#UI] start
 -- @param #string Co the terminal name
 -- @param #number w width
 -- @param #number h height
 -- @return lib.ui_lib#ui
-function UI.start(Co,w,h)
-  local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running()},{})
-  return UI.getUI(co)
+function UI.start(Co,w,h,init)
+  local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running(),init},{})
+  if not init then
+    return UI.getUI(co)
+  else
+    return co
+  end
 end
 
 function UI.getUI(Co)
@@ -52,11 +55,13 @@ end
 --Server --
 -----------
 
-function UI.init(Co,w,h,Parent)
+function UI.init(Co,w,h,Parent,init)
   local ui = ui_server.newWindow(Co,w,h,Parent)
   local co = VM.running()
   ui.handle = function(...)UI.handleEvent(co,...)end
   ui.co = co
+  if init then
+    init(ui) end
   return true, {ui = ui}
 end
 

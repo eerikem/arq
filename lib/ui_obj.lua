@@ -34,6 +34,19 @@ function Panel:new()
   return o
 end
 
+--- Check if Panel contains obj
+-- @function [parent=#Panel] contains
+-- @param #Panel self
+-- @param obj
+-- @return #boolean
+function Panel:contains(obj)
+  if self.content[obj] then
+    return true
+  else
+    return false
+  end
+end
+
 -- TODO PanelHandlers deprecated
 function Panel:registerPanelHandlers()
   local handler = function(_,button,x,y)

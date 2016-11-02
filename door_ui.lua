@@ -11,12 +11,18 @@ local DoorUI = {}
 
 ---
 -- @function [parent=#door_ui] start_link
--- @param #string monCo the monitor to spawn the ui
--- @param door The door parameters
--- @param #thread doorCo Address of the door server
-function DoorUI.start_link(monCo,door,doorCo,Door,password)
+-- @param #string monitor
+-- @param #string title
+-- @param #thread door
+-- @param door#door Door The Door module
+-- @param #string password optional
+-- @return #thread address to new UI Client
+function DoorUI.start_link(monitor,title,door,Door,password)
+  --- init function to initialize Client UI.
+  -- @function [parent=#door_ui] init
+  -- @param lib.ui_lib#ui ui The ui object initialized in UI.lua
   local function init(ui)
-    local title = Graphic:new(door.title)
+    local title = Graphic:new(title)
     local body = Panel:new()
     local open = Graphic:new("OPEN")
     local close = Graphic:new("CLOSE")
@@ -31,7 +37,6 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
     body:add(status)
     ui:add(body)
     close.reactor:stop()
-
     --TODO Remove Duplicate Hacks
     local function enable(button2)
       local button1 = body.index[1]
@@ -43,7 +48,7 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
       end
       return button1
     end
-
+  
     local lastDenied = nil
     local denyTime
     local flashDenied = function()
@@ -58,24 +63,34 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
 
     local Mod = {
       success = function (door,From)
-        Door.forceOpen(door)
+        local res, time = Door.open(door)
+        if res == "denied" then
+          gen_server.cast(From,{"deny",2})
+        end
       end,
       canceled = function (UI)
         gen_server.cast(UI,{"canceled"})
       end
     }
-    
+        
     local function cancel()
       VM.log("received Canceled")
       ui:tap()
+    end
+    
+    local function deny()
+      ui:beep()
+      status.text="Denied!"
+      ui:update()
+      lastDenied = VM.spawn(flashDenied)
     end
     
     local function handler(door,reactor)
       return function()
         if reactor.parent == open then
           if password then
-            return Password.start(password,monCo,
-              {Mod,"success",{doorCo,ui.co}},
+            return Password.start(password,monitor,
+              {Mod,"success",{door,ui.co}},
               {Mod,"canceled",{ui.co}})
           end
           local res, time = Door.open(door)
@@ -86,10 +101,7 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
           elseif res == "canceled" then
             cancel()
           else
-            ui:beep()
-            status.text="Denied!"
-            ui:update()
-            lastDenied = VM.spawn(flashDenied)
+            deny()
           end
         elseif reactor.parent == close then
           local res, time = Door.close(door)
@@ -117,20 +129,25 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
       enable(close)
     end
 
-    local function denyHandler()
-      flashDenied()
+    local function denyHandler(_,time)
+      denyTime = time
+      deny()
     end
     
     local function cancelHandler()
       cancel()
     end
-
-    open:setOnSelect(ui,handler(doorCo,open.reactor))
-    close:setOnSelect(ui,handler(doorCo,close.reactor))
-    ui.reactor:register("closed",closeHandler)
-    ui.reactor:register("opened",openHandler)
-    ui.reactor:register("deny",denyHandler)
-    ui.reactor:register("canceled",cancelHandler)
+    
+    if door then
+      open:setOnSelect(ui,handler(door,open.reactor))
+      close:setOnSelect(ui,handler(door,close.reactor))
+      ui.reactor:register("closed",closeHandler)
+      ui.reactor:register("opened",openHandler)
+      ui.reactor:register("deny",denyHandler)
+      ui.reactor:register("canceled",cancelHandler)
+    else
+      open:setOnSelect(ui,denyHandler)
+    end
     
     local function bright()
       ui:setBackground(colors.lightGray)
@@ -142,12 +159,13 @@ function DoorUI.start_link(monCo,door,doorCo,Door,password)
 
     bright()
     ui:update()
-    
-    Door.subscribe(doorCo)
+    if door then
+      Door.subscribe(door)
+    end
     
   end
 
-  return UI.start(monCo,7,5,init)
+  return UI.start(monitor,7,5,init)
 end
 
 return DoorUI

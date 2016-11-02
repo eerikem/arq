@@ -94,6 +94,7 @@ end
 local function removeUI(State,ui)
   local UI = ui:leave()
   ui.term.setVisible(false)
+  State.windows[ui]=nil
   if State.focus == ui then
     State.focus = UI
   end
@@ -276,14 +277,13 @@ end
 
 local function newWindow(State,Co,w,h)
   local maxW, maxH = State.native.getSize()
-  if not w or not h then w, h = maxW, maxH end --todo no arg goes to best fit?!?
+  if not w or not h then w, h = maxW, maxH end --TODO no arg goes to best fit?!?
   if w == "max" then w = maxW end
   if h == "max" then h = maxH end
   local ui = UI:new(window.create(State.native,1,1,w,h))
   ui.term.setVisible(false)
   ui.native = State.native
   ui.setTextScale = State.native.setTextScale
-  State.windows[ui] = true --TODO window management?
   ui.redraw = function(self)
     gen_server.cast(Co,{"update",self})
   end
@@ -308,6 +308,7 @@ function Server.handle_call(Request,From,State)
     local Co = Parent or unpack(From)
     local ref = VM.monitor("process", Co)
     local window = newWindow(State,VM.running(),w,h)
+    State.windows[window] = ref
     State.monitors[ref]=window
     if Parent then 
       State.parents[window]=From[1]end
@@ -335,14 +336,16 @@ function Server.handle_cast(Request,State)
       local ui = Request[2]
       redrawStack(State,ui)
     elseif event == "remove" then
+      local ui = Request[2]
+      local ref = State.monitors[State.windows[ui]]
+      VM.demonitor(ref)
+      State.monitors[ref] = nil
       removeUI(State,Request[2])
-      --TODO redraw new stack
-      --TODO remove monitor
       redrawStack(State)
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
-    elseif State.events[Request[1]] then --todo generic event subscriber handler
-      local co = State.events[Request[1]][1]--todo for each
+    elseif State.events[Request[1]] then --TODO generic event subscriber handler
+      local co = State.events[Request[1]][1]--TODO for each
       local event, dir, x, y = unpack(Request)
       if dir == 1 then
         VM.send(co,"scroll_down")

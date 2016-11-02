@@ -1,23 +1,13 @@
 local gen_server = require "gen_server"
 local ui_server = require "ui_server"
 local UI = require "lib.ui"
-local Bundle = require "lib.bundle"
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 local Password = require "password"
 local doorUI = require "door_ui"
 
-local CABLE_SIDE = "back"
-
-local function initDoor(State)
-  if State.door then
-    State.door:disable()
-  end
-  if State.use_detector then
-    State.detector:disable()
-    State.inner = nil
-  end
-end
+---
+-- @module door
 
 local Door = {}
 
@@ -25,81 +15,56 @@ local Door = {}
 --External API--
 ----------------
 
-function Door.start()
-
+---
+-- @function [parent=#door] new
+-- @param lib.bundle#lib.bundle cable that controls the door
+-- @param #number time optional delay before the door auto closes
+-- @param lib.bundle#lib.bundle detector Optional detector cable
+-- @return #thread
+function Door.new(cable,time,detector)
+  if not cable then error("Door must have a cable",2) end
   local properties = {
-    type = "generic",
-    --When set to true the inner monitor will be ignored
-    --and the detector will be used instead
-    use_detector = false,
-    door_delay = 5,
-    title = "ACCESS",
-    door = Bundle:new(CABLE_SIDE,colors.white,"door"),
-    detector = Bundle:new(CABLE_SIDE,colors.black,"detector"),
-    outer = "monitor_1",
-    inner = "monitor_5"
-  }
-  
+    type = "normal",
+    door_delay = time or 5,
+    doorCable = cable,
+    detector = detector
+    }
   local ok, Co = Door.start_link(properties)
-  VM.log("Started Door "..tostring(Co))
-  if properties.use_detector then
-    EVE.subscribe("redstone",Co)
-  end
   return Co
 end
 
-function Door.startDetectorDoor(doorCableColor,detectorCableColor,monitor,ui_title,door_delay,password)
-  if not doorCableColor or not detectorCableColor or not monitor then error("Badarg",2)end
-  local delay = door_delay or 5
-  local title = ui_title or "ACCESS"
+---
+-- @function [parent=#door] newCargo
+-- @param lib.bundle#lib.bundle open opens bay door
+-- @param lib.bundle#lib.bundle close closes bay door
+-- @param #number time how long to open/close door
+-- @param lib.bundle#lib.bundle detector Optional detector cable
+-- @return #thread
+function Door.newCargo(open,close,time,detector)
+  if not (open and close) then error("Badarg: cables missing",2) end
+  if not time then error("Badarg: time missing",2) end
   local properties = {
-    type = "detector",
-    use_detector = true,
-    door_delay = delay,
-    title = title,
-    door = Bundle:new(CABLE_SIDE,doorCableColor,"door"),
-    detector = Bundle:new(CABLE_SIDE,detectorCableColor,"detector"),
-    outer = monitor,
-    password = password
-  }
+    type = "cargo",
+    time = time,
+    detector = detector,
+    openCable = open,
+    closeCable = close
+    }
   local ok, Co = Door.start_link(properties)
-  VM.log("Started Detector Door "..tostring(Co))
-  EVE.subscribe("redstone",Co)
   return Co
 end
 
-function Door.startMonitorDoor(doorCableColor,innerMonitor,outerMonitor,ui_title,door_delay,password)
-  if not doorCableColor or not innerMonitor or not outerMonitor then error("Badarg",2)end
-  local delay = door_delay or 5
-  local title = ui_title or "ACCESS"
-  local properties = {
-    type = "monitor",
-    use_detector = false,
-    door_delay = delay,
-    title = title,
-    door = Bundle:new(CABLE_SIDE,doorCableColor,"door"),
-    inner = innerMonitor,
-    outer = outerMonitor,
-    password = password
-  }
-  local ok, Co = Door.start_link(properties)
-  VM.log("Started Monitor Door "..tostring(Co))
-  return Co
-end
-
-function Door.startFakeDoor(monitor,ui_title)
-  if not monitor then error("Badarg",2) end
-  local title = ui_title or "ACCESS"
-  local properties = {
-    type = "fake",
-    use_detector = false,
-    title = title,
-    outer = monitor,
-    locked = true
-  }
-  local ok, Co = Door.start_link(properties)
-  VM.log("Started Fake Door "..tostring(Co))
-  return Co
+---
+-- @function [parent=#door] newUI
+-- @param #string monitor
+-- @param #string title 
+-- @param #thread door to subscribe to 
+-- @param #string password optional
+-- @return #thread
+function Door.newUI(monitor,title,door,password)
+  if not monitor then error("Badarg: monitor",2) end
+  local title = title or "ACCESS"
+  return doorUI.start_link(monitor,{title=title},door,Door,password)
 end
 
 function Door.open(door)
@@ -142,6 +107,7 @@ function Door.getState(door)
 end
 
 function Door.subscribe(door,co)
+  if not door then error("badarg",2) end
   local co = co or VM.running()
   gen_server.cast(door,{"subscribe",co})
 end
@@ -188,16 +154,106 @@ local function setTimer(State)
   end
 end
 
+
+local function bayDoorTimer(callback,siloDelay,State)
+  local time = 0
+  local r,sleep,reverse = VM.receive()
+  if r == "start" then
+    time = os.clock()
+    if sleep then
+      EVE.tick(sleep % siloDelay)
+    else
+      EVE.tick(siloDelay)
+    end
+  else
+    error("door Timer received bad signal")
+  end
+  local r,to = VM.receive()
+  if r == "wake" then
+    return callback()
+  elseif r == "stop_timer" then
+    if to then
+      if reverse then
+        return VM.send(to,"start",siloDelay - (os.clock() - time),false)
+      else
+        return VM.send(to,"start",os.clock() - time,true)
+      end
+    end
+  else
+    error("doorTimer received bad msg: "..r)
+  end
+end
+
+local function cargoOpen(State)
+  State.closeCable:disable()
+  State.openCable:enable()
+  notify(State,"opened")
+  State.opening = true
+  State.closed = false
+  local fun = function()
+    State.openCable:disable()
+    State.opening = false
+    State.open = true
+    State.timer = nil end
+  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time,State)end)
+  if State.closing then
+    VM.send(State.timer,"stop_timer",newTimer)
+    State.timer = newTimer
+  else
+    State.timer = newTimer
+    VM.send(newTimer,"start")
+  end
+end
+
+local function cargoClose(State)
+  State.openCable:disable()
+  State.closeCable:enable()
+  notify(State,"closed")
+  State.closing = true
+  State.open = false
+  
+  local fun = function()
+    State.closeCable:disable()
+    State.closing = false
+    State.closed = true
+    State.timer = nil end
+  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time,State)end)
+  if State.opening then
+    VM.send(State.timer,"stop_timer",newTimer)
+    State.timer = newTimer
+  else
+    State.timer = newTimer
+    VM.send(newTimer,"start")
+  end
+end
+
+local function initCables(State)
+  if State.doorCable then
+    State.doorCable:disable()
+  else
+    State.openCable:disable()
+    State.closeCable:disable()
+    cargoClose(State)
+  end
+  if State.detector then
+    State.detector:disable()
+  end
+end
+
 local function open(State)
+  if not State.doorCable then
+    return cargoOpen(State) end
   State.open = true
-  State.door:enable()
+  State.doorCable:enable()
   setTimer(State)
   notify(State,"opened")
 end
 
 local function close(State)
+  if not State.doorCable then
+    return cargoClose(State) end
   State.open = false
-  State.door:disable()
+  State.doorCable:disable()
   notify(State,"closed")
 end
 
@@ -212,24 +268,22 @@ local function unlock(State)
 end
 
 function Door.init(props)
-  
-  local uis = {outer=doorUI.start_link(props.outer,props,VM.running(),Door)}
-  if props.inner then uis.inner=doorUI.start_link(props.inner,props,VM.running(),Door) end
   local State = {
-    uis = uis,
-    title = props.title,
-    locked = false,
-    open = false,
     alreadyOn=false,
     timer = nil,
-    subscribers = {}
+    subscribers = {},
+    locked = false,
+    open = false,
+    opening = false,
+    closing = false,
+    closed=true
     }
   
   for k,v in pairs(props) do
     State[k]=v
   end
   
-  initDoor(State)
+  initCables(State)
   return true, State
 end
 
@@ -237,7 +291,7 @@ function Door.handle_call(Request,From,State)
   local event = Request[1]
   if event == "open" then
     local force = Request[2]
-    if not force and State.locked or not State.door then
+    if not force and State.locked then
       gen_server.reply(From,"denied")
     else
       gen_server.reply(From,"opened")
@@ -245,7 +299,7 @@ function Door.handle_call(Request,From,State)
     end
   elseif event == "close" then
     local force = Request[2]
-    if State.locked and not force or not State.door then
+    if State.locked and not force then
       gen_server.reply(From,"denied")
     else
       gen_server.reply(From,"closed")

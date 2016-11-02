@@ -28,7 +28,9 @@ end
 -- @param #string Co the terminal name
 -- @param #number w width
 -- @param #number h height
+-- @param #function init optional init function
 -- @return lib.ui_lib#ui
+-- @return #thread when init provided returns thread
 function UI.start(Co,w,h,init)
   local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running(),init},{})
   if not init then

@@ -38,7 +38,6 @@ local arqSup = require 'arq_sup'
 local ui_sup = require 'ui_supervisor'
 local arqMenu = require 'arqMenu'
 local uiMenu = require 'ui_sup_menu'
-
 local Attack = require "attack"
 local Elevator = require "elevator"
 local Teleport = require "teleport"
@@ -49,6 +48,7 @@ local Manager = require "door_manager"
 local Password = require "password"
 local ARQ_lab = require "arq_lab"
 local status_ui = require "status_ui"
+local Door = require "door"
 local door_ui = require "door_ui"
 VM.init()
 
@@ -63,21 +63,8 @@ uiMenu:new("terminal")
 --Password.start(123,"terminal",{{fun=function(str)VM.log(str)end},"fun",{"Password success."}})
 --Airlock.start()
 
-local silo = Door.startMonitorDoor(colors.yellow,"monitor_111","monitor_112","Lab 102",nil,"123")
---status_ui.start(silo,"monitor_110")
-local ok,str = pcall(door_ui.start_link,"terminal",{title="Test"},silo,Door,"123")
-if not ok then VM.log(str) end
-local ok,str = pcall(status_ui.start,silo,"monitor_110")
-if not ok then VM.log(str) end
---status_ui.start(silo,"monitor_109")
-local doors = {
-  silo,
-  Door.startFakeDoor("monitor_116","Lab 103"),
-  Door.startFakeDoor("monitor_118","Lab 101")
---Door.startFakeDoor("monitor_3","DENIED")
-}
-Manager.start(doors)
-ARQ_lab.start()
+local doors = ARQ_lab.start()
+--Manager.start(doors)
 
 arqMenu.start()
 

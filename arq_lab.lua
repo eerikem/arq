@@ -4,6 +4,9 @@ local Bundle = require "lib.bundle"
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 local Menu = require 'lib.ui_menu'
+local Door = require "door"
+local door_ui = require "door_ui"
+local status_ui = require "status_ui"
 
 local SILO_DELAY = 5
 
@@ -56,76 +59,6 @@ end
 ---------------
 --Server & UI--
 ---------------
-
-local function doorTimer(callback)
-  local time = 0
-  local r,sleep,reverse = VM.receive()
-  if r == "start" then
-    time = os.clock()
-    if sleep then
-      EVE.tick(sleep % SILO_DELAY)
-    else
-      EVE.tick(SILO_DELAY)
-    end
-  else
-    error("door Timer received bad signal")
-  end
-  local r,to = VM.receive()
-  if r == "wake" then
-    return callback()
-  elseif r == "stop_timer" then
-    if to then
-      if reverse then
-        return VM.send(to,"start",SILO_DELAY - (os.clock() - time),false)
-      else
-        return VM.send(to,"start",os.clock() - time,true)
-      end
-    end
-  else
-    error("doorTimer received bad msg")
-  end
-end
-
-local function open(door)
-  cables.close_silo:disable()
-  cables.open_silo:enable()
-  door.opening = true
-  door.closed = false
-  local fun = function()
-    cables.open_silo:disable()
-    door.opening = false
-    door.open = true
-    door.timer = nil end
-  local newTimer = VM.spawn(function()doorTimer(fun)end)
-  if door.closing then
-    VM.send(door.timer,"stop_timer",newTimer)
-    door.timer = newTimer
-  else
-    door.timer = newTimer
-    VM.send(newTimer,"start")
-  end
-end
-
-local function close(door)
-  cables.open_silo:disable()
-  cables.close_silo:enable()
-  door.closing = true
-  door.open = false
-  
-  local fun = function()
-    cables.close_silo:disable()
-    door.closing = false
-    door.closed = true
-    door.timer = nil end
-  local newTimer = VM.spawn(function()doorTimer(fun)end)
-  if door.opening then
-    VM.send(door.timer,"stop_timer",newTimer)
-    door.timer = newTimer
-  else
-    door.timer = newTimer
-    VM.send(newTimer,"start")
-  end
-end
 
 local function alarmPanel(Co)
   local ui = UI.start(Co,7,5)
@@ -268,10 +201,24 @@ function Lab.handle_cast(Request,State)
 end
 
 function Lab.init()
+  
+  
+  local silo = Door.newCargo(cables.open_silo,cables.close_silo,SILO_DELAY)
+  Door.newUI("monitor_111","Lab 102",silo)
+  local siloAccess = Door.newUI("monitor_112","Lab 102",silo,"123")
+  status_ui.start(silo,"monitor_110")
+--status_ui.start(silo,"monitor_109")
+
+  local doors = {
+    silo,
+    Door.newUI("monitor_116","Lab 103"),
+    Door.newUI("monitor_118","Lab 101"),
+    Door.new(cables.storage,cables.storage_sensor)
+  }
+
   local ui = initUI()
   local panel1 = alarmPanel("monitor_114")
   local panel2 = alarmPanel("monitor_115")
-  local door = {opening = false, closing = false,open = true, closed=false}
   return true, {ui = ui,silo = door}
 end
 

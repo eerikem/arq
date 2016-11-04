@@ -147,7 +147,7 @@ end
 --- Set UI background color
 -- @function [parent=#ui] setBackground
 -- @param #ui self
--- @param colors#color
+-- @param colors#color color
 function UI:setBackground(color)
   self.pane.proto.background = color
 end
@@ -155,7 +155,7 @@ end
 --- Set UI text color
 -- @function [parent=#ui] setText
 -- @param #ui self
--- @param colors#color
+-- @param colors#color color
 function UI:setText(color)
   self.pane.proto.textColor = color
 end

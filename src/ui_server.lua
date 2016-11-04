@@ -125,11 +125,14 @@ end
 local function resized(_,State)
   VM.log(State.ui.name.." resized")
   
+  local w,h = State.native.getSize()
   local fun = function(ui)
+    --TODO handle non monitor sized uis
+    ui.term.reposition(1,1,w,h)
     if ui.alignment then
       ui:align(unpack(ui.alignment))
     end
-    redraw(ui)
+    ui:update()
   end
   mapUIs(State,fun)
   return State
@@ -238,7 +241,9 @@ local function initNativeUI(term,name)
   local ui = UI:new(win)
   
   if peripheral.getType(name) == "monitor" then
-    ui.setTextScale = term.setTextScale end
+    term.setTextScale(1)
+    ui.setTextScale = term.setTextScale
+  end
   
   ui.name = name
   ui:setBackground(colors.black)

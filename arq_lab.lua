@@ -271,8 +271,8 @@ function Lab.init()
   local siloAccess = Door.newUI("monitor_112","Lab 102",hallway,"123")
   Door.denyAccess(siloAccess)
   status_ui.start(silo,"monitor_110")
---status_ui.start(silo,"monitor_109")
   static_ui.start("monitor_117","Lab 103 - Processing")
+  static_ui.start("monitor_118","Lab 101","Re-search")
 
   Door.subscribe(silo)
 
@@ -281,7 +281,7 @@ function Lab.init()
   local doors = {
     silo,
     Door.newUI("monitor_116","Lab 103"),
-    Door.newUI("monitor_118","Lab 101"),
+    Door.newUI("monitor_119","Lab 101"),
     Door.new(cables.storage,cables.storage_sensor),
     storage
   }
@@ -290,7 +290,8 @@ function Lab.init()
   local alarms = {
     AlarmUI.start_link("monitor_114"),
     AlarmUI.start_link("monitor_115"),
-    AlarmUI.start_link("terminal")
+    AlarmUI.start_link("terminal"),
+    status_ui.start(silo,"monitor_109")
   }
   return true, {ui = ui,silo = silo,siloAccess = siloAccess,hallAccess=hallAccess,alarms = alarms}
 end

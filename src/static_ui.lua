@@ -10,12 +10,22 @@ local Status = {}
 -- @param #string monitor
 -- @param #string title
 -- @param #string status optional secondary message
-function Status.start(monitor,title,status)
+-- @param #number scale optional monitor scale
+function Status.start(monitor,titleStr,status,scale)
   local ui = UI.start(monitor)
-  local title = Graphic:new(title)
+  local title = Graphic:new(titleStr)
   local body = Panel:new()
   
   ui.setTextScale(2)
+  local w,h = ui.term.getSize()
+  if string.len(titleStr) > w then
+      ui.setTextScale(1)
+  end
+  
+  if status and string.len(status) > w then
+    ui.setTextScale(1)
+  end
+  
   title:align("center")
   ui:add(title)
   
@@ -24,7 +34,7 @@ function Status.start(monitor,title,status)
     status:align("center")
     body:add(status)
     ui:add(body)
-    status:setTextColor(colors.red)
+    status:setTextColor(colors.lightGray)
   end  
 
   local function dark()
@@ -38,6 +48,7 @@ function Status.start(monitor,title,status)
   end
   
   dark()
+  VM.log(string.format("%s size: %d %d",monitor,ui.term.getSize()))
   ui:update()  
 end
 

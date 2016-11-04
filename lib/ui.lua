@@ -5,6 +5,10 @@ local ui_server = require "src.ui_server"
 -- An event handler for UI Client events
 -- @module UI
 
+---
+-- @type ui
+-- @extends lib.ui_lib#ui
+
 --- UI Client State
 -- @type State
 -- @field lib.ui_lib#ui ui
@@ -29,7 +33,7 @@ end
 -- @param #number w width
 -- @param #number h height
 -- @param #function init optional init function
--- @return lib.ui_lib#ui
+-- @return lib.ui#ui
 -- @return #thread when init provided returns thread
 function UI.start(Co,w,h,init)
   local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running(),init},{})
@@ -56,6 +60,12 @@ end
 -----------
 --Server --
 -----------
+
+---
+-- @function [parent=#ui] handle
+-- @param event
+
+--- @field [parent=#ui] #thread co
 
 function UI.init(Co,w,h,Parent,init)
   local ui = ui_server.newWindow(Co,w,h,Parent)

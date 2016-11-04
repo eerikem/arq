@@ -74,7 +74,6 @@ function DoorUI.start_link(monitor,title,door,Door,password)
     }
         
     local function cancel()
-      VM.log("received Canceled")
       ui:tap()
     end
     
@@ -138,6 +137,10 @@ function DoorUI.start_link(monitor,title,door,Door,password)
       deny()
     end
     
+    local function denyAll()
+      deny()
+    end
+    
     local function cancelHandler()
       cancel()
     end
@@ -160,7 +163,7 @@ function DoorUI.start_link(monitor,title,door,Door,password)
       ui.reactor:register("denyAccess",accessHandler)
       ui.reactor:register("allowAccess",accessHandler)
     else
-      open:setOnSelect(ui,denyHandler)
+      open:setOnSelect(ui,denyAll)
     end
     
     local function bright()

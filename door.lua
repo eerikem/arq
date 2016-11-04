@@ -72,7 +72,6 @@ function Door.open(door)
 end
 
 function Door.forceOpen(door)
-  VM.log("Called force Open")
   return gen_server.call(door,{"open",true})
 end
 
@@ -136,13 +135,10 @@ local function delay(door,State)
       State.timer = nil
       break
     elseif event == "reset" then
-      VM.log("resetting timer")
       Ref = EVE.timer(State.door_delay)
     elseif event == "cancel" then
       State.timer = nil
       break
-    else
-      VM.log("Warning: delay received unkown event: "..event)
     end
   end
 end
@@ -344,7 +340,6 @@ function Door.handle_cast(Request,State)
         State.alreadyOn = true
       end
     else
-      VM.log("Setting already On to false")
       State.alreadyOn = false
     end
   elseif event == "close" then
@@ -361,7 +356,6 @@ function Door.handle_cast(Request,State)
     end
   elseif event == "subscribe" then
     local _,Co = unpack(Request)
-    VM.log("Door subscribing "..tostring(Co))
     State.subscribers[Co]=true
   else
     VM.log("Received "..Request)

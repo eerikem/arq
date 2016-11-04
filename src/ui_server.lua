@@ -105,35 +105,33 @@ local function redraw(ui)
   ui.term.setVisible(false)
 end
 
-local function redrawStack(State,ui)
-  if not ui or ui == State.background then
-    local ui = State.background
-    redraw(ui)
+--- Map fun over ui stack.
+-- @function [parent=#ui.server] mapUIs
+-- @param State
+-- @param #function fun
+-- @param ui optional ui to start iteration
+local function mapUIs(State,fun,ui)
+  local ui = ui or State.background
+  repeat
+    fun(ui)
     ui = ui.last
-    while ui ~= State.focus do
-      redraw(ui)
-      ui = ui.last
-    end
-    if State.focus ~= State.background then
-      redraw(ui) end
-  else
-    while ui ~= State.focus do
-      redraw(ui)
-      ui = ui.last
-    end
-    if State.focus ~= State.background then
-      redraw(ui) end
-  end
+  until ui == State.background or ui == nil
 end
 
---TODO adjust to new double linked list
+local function redrawStack(State,ui)
+  mapUIs(State,redraw,ui)
+end
+
 local function resized(_,State)
   VM.log(State.ui.name.." resized")
-  for _,UI in ipairs(State.stack) do
-    if UI.alignment then
-      UI:align(unpack(UI.alignment)) end
+  
+  local fun = function(ui)
+    if ui.alignment then
+      ui:align(unpack(ui.alignment))
+    end
+    redraw(ui)
   end
-  redrawStack(State)
+  mapUIs(State,fun)
   return State
 end
 

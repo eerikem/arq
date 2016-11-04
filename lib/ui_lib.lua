@@ -12,6 +12,7 @@ local Panel = require 'lib.ui_obj'
 -- @field lib.cc#term term The parent terminal
 -- @field #string type
 -- @field lib.ui_obj#Panel pane The UI's Panel object
+-- @field lib.reactor#lib.reactor reactor
 
 local UI = {}
 

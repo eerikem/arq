@@ -7,6 +7,7 @@ local Menu = require 'lib.ui_menu'
 local Door = require "door"
 local door_ui = require "door_ui"
 local status_ui = require "status_ui"
+local static_ui = require "static_ui"
 
 local SILO_DELAY = 5
 
@@ -21,7 +22,7 @@ local cables = {
   ignite = Bundle:new(CABLE_SIDE,colors.cyan),
   inject_gas = Bundle:new(CABLE_SIDE,colors.purple),
   prep_piston = Bundle:new(CABLE_SIDE,colors.blue),
-  emergency = Bundle:new(CABLE_SIDE,colors.brown),
+  emergency = Bundle:new(CABLE_SIDE,colors.gray),
   lighting = Bundle:new(CABLE_SIDE,colors.white)
 }
 
@@ -60,31 +61,76 @@ end
 --Server & UI--
 ---------------
 
-local function alarmPanel(Co)
-  local ui = UI.start(Co,7,5)
-  local title = Graphic:new("ALARM")
-  local button = Graphic:new("Trigger")
-  local body = Panel:new()
-  local status = Graphic:new("       ")
-  body.width = "max"
-  title:align("center")
-  body:setLayout("static")
-  button.ypos = 2
-  button:align("center")
-  status.ypos = 3
-  body:add(button)
-  body:add(status)
-  ui:add(title)
-  ui:add(body)
+---Alarm UI module
+-- @type arq_lab.AlarmUI
+local AlarmUI = {} --#arq_lab.AlarmUI
+
+---
+-- @function [parent=#AlarmUI] start_link
+-- @param #string mon the monitor to spawn the ui
+-- @return #thread address to new AlarmUI
+function AlarmUI.start_link(mon)
+  local parent = VM.running()
   
-  button:setTextColor(colors.red)
-  ui:setBackground(colors.lightGray)
-  ui:setText(colors.gray)
-  body:setBackgroundColor(colors.gray)
-  body:setTextColor(colors.lightGray)
+  --- @function init
+  -- @param lib.ui#ui ui The ui object initialized in UI.lua
+  local function init(ui)
+    local title = Graphic:new("ALARM")
+    local button = Graphic:new("Trigger")
+    local body = Panel:new()
+    local status = Graphic:new("       ")
+    body.width = "max"
+    title:align("center")
+    body:setLayout("static")
+    button.ypos = 2
+    button:align("center")
+    status.ypos = 3
+    body:add(button)
+    body:add(status)
+    ui:add(title)
+    ui:add(body)
+    
+    button:setTextColor(colors.red)
+    ui:setBackground(colors.lightGray)
+    ui:setText(colors.gray)
+    body:setBackgroundColor(colors.gray)
+    body:setTextColor(colors.lightGray)
+    
+    local function triggered()
+      ui:setText(colors.white)
+      ui:setBackground(colors.red)
+      body:setBackgroundColor(colors.black)
+      button.text = "WARNING"
+      button.reactor:stop()
+      button:setTextColor(colors.red)
+      ui:update()    
+    end
+        
+    local function reset()
+      ui:setText(colors.gray)
+      ui:setBackground(colors.lightGray)
+      body:setBackgroundColor(colors.gray)
+      button.text = "Trigger"
+      button.reactor:start()
+      button:setTextColor(colors.lightGray)
+      ui:update()
+    end
+    
+    ui.reactor:register("triggered",triggered)
+    button:setOnSelect(ui,Lab.callAlarm)
+    ui.reactor:register("reset",reset)
+    ui:update()
+  end
   
-  ui:update()
-  return ui
+  return UI.start(mon,7,5,init)
+end
+
+function AlarmUI.trigger(Co)
+  gen_server.cast(Co,{"triggered"})
+end
+
+function AlarmUI.reset(Co)
+  gen_server.cast(Co,{"reset"})
 end
 
 local changed
@@ -178,14 +224,28 @@ local function initUI()
   return ui
 end
 
+local function triggerAlarms(State)
+  for _,alarm in ipairs(State.alarms) do
+    AlarmUI.trigger(alarm)
+  end
+end
+
+local function resetAlarms(State)
+  for _,alarm in ipairs(State.alarms) do
+    AlarmUI.reset(alarm)
+  end
+end
+
 function Lab.handle_cast(Request,State)
   local event = Request[1]
   if event == "enable_alarm" then
     cables.emergency:enable()
     State.ui.enabledAlarm()
+    triggerAlarms(State)
   elseif event == "disable_alarm" then
     cables.emergency:disable()
     State.ui.disabledAlarm()
+    resetAlarms(State)
   elseif event == "open_silo" then
     Door.open(State.silo)
     State.ui.openedSilo()
@@ -212,6 +272,7 @@ function Lab.init()
   Door.denyAccess(siloAccess)
   status_ui.start(silo,"monitor_110")
 --status_ui.start(silo,"monitor_109")
+  static_ui.start("monitor_117","Lab 103 - Processing")
 
   Door.subscribe(silo)
 
@@ -226,9 +287,12 @@ function Lab.init()
   }
 
   local ui = initUI()
-  local panel1 = alarmPanel("monitor_114")
-  local panel2 = alarmPanel("monitor_115")
-  return true, {ui = ui,silo = silo,siloAccess = siloAccess,hallAccess=hallAccess}
+  local alarms = {
+    AlarmUI.start_link("monitor_114"),
+    AlarmUI.start_link("monitor_115"),
+    AlarmUI.start_link("terminal")
+  }
+  return true, {ui = ui,silo = silo,siloAccess = siloAccess,hallAccess=hallAccess,alarms = alarms}
 end
 
 return Lab

@@ -24,12 +24,17 @@ function Reactor:remove(h)
   self.handlers[h.id] = nil
 end
 
-function Reactor:register(event,h)
-  if not event and h then error("2 args required to register handler",2) end
+--- Register a new event handler
+-- @function [parent=#lib.reactor] register
+-- @param #lib.reactor self
+-- @param #string event
+-- @param #function handler
+function Reactor:register(event,handler)
+  if not event and handler then error("2 args required to register handler",2) end
 --  print("registering "..event)
 --  sleep(1)
   if not self.handlers[event] then
-    self.handlers[event] = h
+    self.handlers[event] = handler
   else error("event: "..event.." already registered",2)
   end
 end

@@ -22,7 +22,7 @@ function Status.start(doorCo,monitor)
     body:add(title)
     body.width = "max"
     ui:add(body)
-    ui:add(lockdown)
+--    ui:add(lockdown)
     
     lockdown:setTextColor(colors.red)
     
@@ -69,7 +69,7 @@ function Status.start(doorCo,monitor)
     title.width = "max"
     lockdown:align("center")
     body.width = "max"
-    body:add(lockdown)
+--    body:add(lockdown)
     
     ui:add(title)
     ui:add(body)

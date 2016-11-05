@@ -334,7 +334,7 @@ function AlarmUI.reset(Co)
 end
 
 local function initUI()
-  local ui = UI.start("terminal",20,9)
+  local ui = UI.start("top",18,9)
   ui:align("center","right")
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
@@ -372,6 +372,21 @@ local function initUI()
   ui:add(menu)
   ui:update()
   
+  local lighting = true
+  local function lightHandler()
+    if lighting then
+      lighting = false
+      cables.lighting:disable()
+      lights.text = "Lights On"
+    else
+      lighting = true
+      cables.lighting:enable()
+      lights.text = "Lights OFF"
+    end
+    ui:ping()
+    ui:update()
+  end
+  
   ui.enabledAlarm = function()
     reenable(menu,alarmOff,3)
     ui:update()
@@ -401,6 +416,8 @@ local function initUI()
   ui.denied = function()
     ui:beep()
   end
+  
+  lights:setJustOnSelect(ui,lightHandler)
   
   open:setJustOnSelect(ui,openSilo)
   close:setJustOnSelect(ui,function()ui:ping() Lab.closeSilo() end)
@@ -456,7 +473,6 @@ function Lab.handle_cast(Request,State)
   local event = Request[1]
   if event == "enable_alarm" then
     State.alarm = true
-    Door.denyAccess(State.hallAccess)
     cables.emergency:enable()
     State.ui.enabledAlarm()
     Door.close(State.silo)
@@ -466,7 +482,6 @@ function Lab.handle_cast(Request,State)
     State.alarm = false
     cables.emergency:disable()
     State.ui.disabledAlarm()
-    Door.allowAccess(State.hallAccess)
     resetAlarms(State)
   elseif event == "close_silo" then
     Door.close(State.silo)
@@ -474,16 +489,18 @@ function Lab.handle_cast(Request,State)
   elseif event == "opened" then
     State.ui.openedSilo()
     Door.allowAccess(State.siloAccess)
+    Door.allowAccess(State.hallAccess)
   elseif event == "closed" then
     State.ui.closedSilo()
     Door.denyAccess(State.siloAccess)
+    Door.denyAccess(State.hallAccess)
   elseif event == "subscribe" then
     State.producer:subscribe(Request[2])
   elseif event == "start_gas" then
-    cables.inject_gas:enable()
+    cables.inject_gas:disable()
     cables.tube_lights:enable()
   elseif event == "stop_reaction" then
-    cables.inject_gas:disable()
+    cables.inject_gas:enable()
     cables.ignite:disable()
     cables.tube_lights:disable()
   elseif event == "ignite" then
@@ -499,13 +516,14 @@ function Lab.handle_info(Request,State)
 end
 
 function Lab.init()
-
+  cables.lighting:enable()
+  cables.inject_gas:enable()
   local silo = Door.newCargo(cables.open_silo,cables.close_silo,SILO_DELAY)
   Door.open(silo)
   local hallway = Door.new(cables.silo_doors,8)
   local hallAccess = Door.newUI("monitor_111","Lab 102",hallway)
   local siloAccess = Door.newUI("monitor_112","Lab 102",hallway,"123")
-  Door.denyAccess(siloAccess)
+--  Door.denyAccess(siloAccess)
   Door.subscribe(silo)
   local ui = initUI()
   

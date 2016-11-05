@@ -7,8 +7,6 @@ local UI = require "lib.ui"
 
 ---A template for UI Clients
 --@module ui_client
-
-
 local Client = {}
 
 ---

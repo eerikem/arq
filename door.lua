@@ -165,8 +165,10 @@ local function bayDoorTimer(callback,siloDelay,State)
   if r == "start" then
     time = os.clock()
     if sleep then
+      VM.log("silo sleeping "..sleep % siloDelay)
       EVE.tick(sleep % siloDelay)
     else
+      VM.log("silo sleeping "..siloDelay)
       EVE.tick(siloDelay)
     end
   else
@@ -237,7 +239,7 @@ local function initCables(State)
   else
     State.openCable:disable()
     State.closeCable:disable()
-    cargoClose(State)
+--    cargoClose(State)
   end
   if State.detector then
     State.detector:disable()

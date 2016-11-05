@@ -48,7 +48,7 @@ function Status.start(monitor,titleStr,status,scale)
   end
   
   dark()
-  VM.log(string.format("%s size: %d %d",monitor,ui.term.getSize()))
+--  VM.log(string.format("%s size: %d %d",monitor,ui.term.getSize()))
   ui:update()  
 end
 

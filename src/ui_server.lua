@@ -185,9 +185,9 @@ local UI_Events = {
     if keycode == 42 then
       shiftDown = false
     elseif not keys.getName( keycode ) then
-      VM.log(keycode.." up at UI_Server")
+--      VM.log(keycode.." up at UI_Server")
     else
-      VM.log(keys.getName( keycode ).." up at UI_Server")
+--      VM.log(keys.getName( keycode ).." up at UI_Server")
     end
     return State 
     end,
@@ -320,6 +320,8 @@ function Server.handle_call(Request,From,State)
     local ui = Request[2]
     redrawStack(State,ui)
     gen_server.reply(From,"ok")
+  elseif event == "getSize" then
+    gen_server.reply(From,State.native.getSize())
   else
     error("received unkown msg")
   end
@@ -374,13 +376,21 @@ function Server.handle_info(Request,State)
     removeUI(State,ui)
     redrawStack(State)
   else
-    VM.log("Warning UI server handleInfo")
+    VM.log("Warning UI server handleInfo got "..event)
   end
   return State
 end
 
 function Server.listen(Co,event,co)
   gen_server.cast(Co,{"register",event,co})
+end
+
+--- Get the size of term.native
+-- @function [parent=#ui.server] getSize
+-- @param #string Co the name of the term
+-- @return #number, #number
+function Server.getSize(Co)
+  return gen_server.call(Co,{"getSize"})
 end
 
 --- Request a new UI object from server
@@ -394,6 +404,11 @@ function Server.newWindow(Co,w,h,Parent)
   --TODO handle requests to bad monitors
   local ui = gen_server.call(Co,{"new_window",w,h,Parent})
   return ui
+end
+
+function Server.terminate(Reason,State)
+  State.native.clear()
+  State.native.setCursorPos(1,1)
 end
 
 return Server

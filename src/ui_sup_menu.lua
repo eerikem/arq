@@ -3,7 +3,7 @@ local Graphic = require "lib.graphic"
 local Menu = require "lib.ui_menu"
 local Panel, List = require "lib.ui_obj"
 local ui_sup = require "ui_supervisor"
-
+local ui_server = require "ui_server"
 
 local Client = {}
 
@@ -30,6 +30,17 @@ function Client:new(Co)
   m:link(ui)
   ui:align("right")
   ui:update()
+  
+  local function logSizeHandler(monitor)
+    return function()
+      VM.log(string.format("%s is %d by %d",monitor,ui_server.getSize(monitor)))
+    end
+  end
+  
+  for _,g in ipairs(m.index) do
+    g:setJustOnSelect(ui,logSizeHandler(g.text))
+  end
+  
 end
 
 return Client

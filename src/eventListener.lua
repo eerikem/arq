@@ -2,14 +2,15 @@ local gen_server = require 'gen_server'
 local ui_sup = require 'ui_supervisor'
 local Reactor = require 'lib.reactor'
 
-local Server = {running=false}
+THE_RUNNER = false
+local Server = {}
 
-function Server:run()
-  if self.running then
+function Server.run()
+  if THE_RUNNER then
     error("Event listener is already running.",2)
   else
-    self.running = true
-    while self.running do
+    THE_RUNNER = true
+    while THE_RUNNER do
       gen_server.cast("events",{os.pullEvent()})
     end
   end
@@ -172,6 +173,10 @@ end
 --Returns reference
 function Server.queue(event,time)
   return gen_server.call("events",{"queue",event,time},"infinite")
+end
+
+function Server.terminate(Reason,State)
+  THE_RUNNER = false
 end
 
 return Server

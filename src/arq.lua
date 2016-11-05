@@ -68,4 +68,4 @@ local doors = ARQ_lab.start()
 
 arqMenu.start()
 
-EVE:run()
+EVE.run()

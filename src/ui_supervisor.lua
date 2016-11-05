@@ -136,6 +136,12 @@ function Server.newWindow(name,w,h)
   end
 end
 
+function Server.terminate(Reason,State)
+  for name,Co in pairs(State.uis) do
+    gen_server.stop(Co,Reason)
+  end
+end
+
 function Server.statusWindow(Co)
   local bar = statusBar:new(Co,4)
   return function(str)

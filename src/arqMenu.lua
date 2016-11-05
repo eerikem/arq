@@ -46,7 +46,7 @@ local function initUI()
   ui:align("center","left")
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
-  shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)
+  shutdown.reactor:register("selected",function()gen_server.stop("arq_sup","shutdown")end)
   observer.reactor:register("selected",function()Observer.start("terminal")end)
   ui:update()
   return ui

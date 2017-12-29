@@ -34,7 +34,7 @@ local UI_Events = {
 }
 
 local function subscribe(Co,event)
-  EVE.subscribe(Co,event)
+  EVE.subscribe(event,Co)
 end
 
 local function linkNewMon(name,uis)

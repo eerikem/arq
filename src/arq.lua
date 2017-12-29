@@ -55,8 +55,8 @@ uiMenu:new("terminal")
 arqMenu.start()
 
 --Attack.start()
---Teleport.start()
-Elevator.start()
+Teleport.start()
+--Elevator.start()
 --Airlock.start()
 --local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
 --Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),

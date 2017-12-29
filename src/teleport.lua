@@ -5,8 +5,8 @@ local Panel = require "ui_obj"
 
 local Tele = {}
 
-local endtp = "/tpx @p 1 56 48 27"
-local home = "/tpx @p 0 97 79 32"
+local endtp = "/tpx @p 1 -1 59 -63"
+local home = "/tpx @p 0 -271 80 193"
 
 local function teleUI(Co)
   local ui = ui_server.newWindow(Co,7,5)
@@ -42,7 +42,7 @@ function Tele.start()
 end
 
 function Tele.init()
-  local ui = teleUI("monitor_1")
+  local ui = teleUI("right")
   return true, {ui =ui}
 end
 

@@ -45,17 +45,22 @@ local Airlock = require "airlock"
 local Observer = require "observer"
 local Door = require "door"
 local Manager = require "door_manager"
+local toggler = require "perphListener"
 
 VM.init()
 
 supervisor.start_link(arqSup,{},"arq_sup")
 VM.log = ui_sup.statusWindow("terminal")
 
+toggler.start()
+
 uiMenu:new("terminal")
 arqMenu.start()
 
+
+
 --Attack.start()
-Teleport.start()
+--Teleport.start()
 --Elevator.start()
 --Airlock.start()
 --local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),

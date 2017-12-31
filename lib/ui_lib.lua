@@ -1,5 +1,18 @@
-local Reactor = require 'Reactor'
-local Panel = require 'ui_obj'
+local Reactor = require 'lib.reactor'
+local Panel = require 'lib.ui_obj'
+
+--- UI objects
+-- @type ui_obj
+
+--- The ui module.
+-- @module UI
+
+--- The ui object
+-- @type ui
+-- @field lib.cc#term term The parent terminal
+-- @field #string type
+-- @field lib.ui_obj#Panel pane The UI's Panel object
+-- @field lib.reactor#lib.reactor reactor
 
 local UI = {}
 
@@ -11,30 +24,56 @@ local tapSound = "/playsound fdi:event.montouch @p"
 local selectSound = "/playsound fdi:event.monaccept @p"
 local errorSound = "/playsound fdi:event.mondecline @p"
 
+---
+--@function [parent=#ui] beep
+--@param #ui self
 function UI:beep()
   exec(errorSound)
 end
 
+---
+--@function [parent=#ui] ping
+--@param #ui self
 function UI:ping()
   exec(selectSound)
 end
 
+---
+--@function [parent=#ui] tap
+--@param #ui self
 function UI:tap()
   exec(tapSound)
 end
 
+--- Initialize a new ui
+-- @function [parent=#UI] new
+-- @param self
+-- @param #term term the parent terminal
+-- @return #ui
 function UI:new(term)
   if not term then error("UI needs a term",2) end
   --setmetatable(self,{__index = term})
-  local o = {type="ui",pane = Panel:new(),term = term,selectables={},redraw = term.redraw}
+  local o = {
+    type="ui",
+    pane = Panel:new(),
+    term = term,
+    selectables={},
+    redraw = term.redraw}
   o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self
-  
   o:registerUIListeners()
   return o
 end
 
+--- Create a new ui whose term is a window of the current ui.
+-- @function [parent=#ui] newWindow
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @param #number w
+-- @param #number h
+-- @return #ui
 function UI:newWindow(x,y,w,h,visible)
   assert(x and y and w and h,'Four parameters expected')
   local t
@@ -55,6 +94,10 @@ function UI:draw(obj)
   return obj:redraw(self)
 end
 
+--- Add objects into the ui's panel
+-- @function [parent=#ui] add
+-- @param #ui self
+-- @return #number The number of lines added to the panel
 function UI:add(...)
   local n = 0 
   for _,obj in ipairs(arg) do
@@ -71,8 +114,12 @@ function UI:add(...)
   return n
 end
 
-function UI:remove(o)
-  self.pane:remove(o)
+---Remove a given object from the UI panel
+--@function [parent=#ui] remove
+--@param #ui self
+--@param #ui_obj obj
+function UI:remove(obj)
+  self.pane:remove(obj)
 end
 
 function UI:printCentered(str, ypos,n,noscroll)
@@ -101,15 +148,26 @@ function UI:indentLeft(str, indent, ypos,noscroll)
   return self:write(str,noscroll)
 end
 
+--- Set UI background color
+-- @function [parent=#ui] setBackground
+-- @param #ui self
+-- @param colors#color color
 function UI:setBackground(color)
   self.pane.proto.background = color
 end
 
+--- Set UI text color
+-- @function [parent=#ui] setText
+-- @param #ui self
+-- @param colors#color color
 function UI:setText(color)
-  if type(self) == "number" then error("got it",2) end
   self.pane.proto.textColor = color
 end
 
+--- Redraw the UI
+-- @function [parent=#ui] update
+-- @param #ui self
+-- @return #number The number of lines redrawn
 function UI:update()
 --  local back = term.getBackgroundColor()
   --if self.pane.proto.background then
@@ -133,6 +191,10 @@ function UI:update_sync()
   return self:redraw_sync()
 end
 
+--- Align the UI within the term.
+-- At most two options of: "center", "top", "bottom", "left", "right" 
+-- @function [parent=#ui] align
+-- @param #ui self
 function UI:align(...)
   local w,h = self.term.getSize()
   local x,y = self.term.getPosition()
@@ -263,6 +325,13 @@ function UI.lineWrap(sText,w,line,room)
   return line
 end
 
+--- Check whether coordinates intersect with UI.
+-- x and y are relative to the term
+-- @function [parent=#ui] onMe
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @return #boolean
 function UI:onMe(x,y)
   local xpos,ypos = self.term.getPosition()
   local w,h = self.term.getSize()
@@ -274,6 +343,16 @@ function UI:onMe(x,y)
   return false
 end
 
+--- Add a ui_obj to receive user interactions.
+-- WARNING this functionality in progress.
+-- Events and objects must be one to one.
+-- @function [parent=#ui] register
+-- @param #ui self
+-- @param #ui_obj
+-- @param #string event
+
+--TODO better UI registering of events
+--handle conflicts?!? registering and deregistering?!?
 function UI:register(obj,event)
   if event == "clickable" then
     self.selectables[obj]=true
@@ -284,7 +363,7 @@ function UI:register(obj,event)
       end
     end
     self.reactor:register(event,handler)
-  elseif event == "keys" then
+  elseif event == "keys" then --TODO this handler belongs in ui_menu
     local handler = function (event,code,down)
       if code == keys.enter
         or code == keys.left or code == keys.right
@@ -293,11 +372,26 @@ function UI:register(obj,event)
       end
     end
     self.reactor:register("key",handler)
+  elseif event == "key" then
+    --TODO obj is actually a handler passed in
+    self.reactor:register("key",obj)
+  elseif event == "char" then
+    --TODO obj is actually a handler passed in
+    self.reactor:register("char",obj)
+  elseif event == "draggable" then
+    self.reactor:register("mouse_drag",obj)
   else
     error(event.." not a recognised ui interaction")
   end
 end
 
+
+--- Translate coordinates from term so relative to UI.
+-- @function [parent=#ui] relativeXY
+-- @param #ui self
+-- @param #number x
+-- @param #number y
+-- @return #number, #number
 function UI:relativeXY(x,y)
   local xpos,ypos = self.term.getPosition()
   y = y - ypos + 1
@@ -305,6 +399,8 @@ function UI:relativeXY(x,y)
   return x,y
 end
 
+--Register UI event handlers that forward mouse
+--events to the corresponding SELECTABLE panel objects
 function UI:registerUIListeners()
   local clickDown
   local function clickHandler(event,id,button,x,y)
@@ -313,7 +409,6 @@ function UI:registerUIListeners()
       return VM.log("Mouse up "..id.." from unrelated mouse down.")  
     end
     x,y = self:relativeXY(x,y)
---    VM.log("UI "..self.pane.id.." reactor got "..table.concat({id,button,x,y}," "))
     for obj,_ in pairs(self.selectables) do
       if obj:onMe(x,y) and obj.reactor.run then
         return obj.reactor:handleEvent(event,button,x,y)
@@ -325,10 +420,7 @@ function UI:registerUIListeners()
     x,y = self:relativeXY(x,y)
     for obj,_ in pairs(self.selectables) do
       if obj:onMe(x,y) and obj.reactor.run then
---        VM.log("touch on ui "..obj.id.." "..x.." "..y)
         return obj.reactor:handleEvent(event,x,y)
-      else
---        VM.log("touch not on me")
       end
     end
   end

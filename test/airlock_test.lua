@@ -170,7 +170,7 @@ function test_cycle()
   luaunit.assertFalse(State.doors.inner.closing)
   runFor(4)
   luaunit.assertTrue(State.doors.outer.opening)
-  runFor(2)
+  runFor(2.5)
   luaunit.assertFalse(State.doors.outer.opening)
   luaunit.assertTrue(State.doors.outer:isOut())
   --cycle when a door is open then open while closing

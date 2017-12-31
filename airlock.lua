@@ -1,8 +1,8 @@
 local gen_server = require "gen_server"
 local ui_server = require "ui_server"
-local Bundle = require "bundle"
-local Graphic = require "graphic"
-local Panel = require "ui_obj"
+local Bundle = require "lib.bundle"
+local Graphic = require "lib.graphic"
+local Panel = require "lib.ui_obj"
 
 local CABLE_SIDE = "back"
 local DELAY = 4

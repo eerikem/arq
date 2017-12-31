@@ -10,13 +10,16 @@ local require = function(name)
     error("Expected filename",2)
   end
   
+  name = string.gsub(name,"%.lua$","")
+  name = string.gsub(name,"%.","/")
+  
   local ENV = getfenv(2)
   local loadedFiles = ENV.loadedFiles or {}
   ENV.loadedFiles = loadedFiles
-  ENV.loading = {}
+  ENV.loading = ENV.loading or {}
   
   if ENV.loading[name] then
-    error("Already loading "..name,2)
+    error("Circular require! Already loading "..name,2)
   else
     ENV.loading[name]=true
   end
@@ -28,7 +31,7 @@ local require = function(name)
   local dofile = function( _sFile )
     local fnFile, e = loadfile( _sFile )
     if fnFile then
-      setfenv( fnFile, getfenv(3) )
+      setfenv( fnFile, ENV )
       return fnFile()
     else
       error( e, 2 )
@@ -43,8 +46,6 @@ local require = function(name)
     return unpack(modules)
   end
   
-  if not ENV.loadedFiles then
-    loadedFiles = {} end
   local file = shell.resolve(name)
   if loadedFiles[file] then
     return unpack(ENV.loadedFiles[file])

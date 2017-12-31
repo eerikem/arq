@@ -1,6 +1,14 @@
-local Reactor = require 'reactor'
-local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0}
+local Reactor = require 'lib.reactor'
+local Graphic = {text = "", xpos = 1, ypos = 1,height = 1,absX = 0,absY = 0, width = 0,lastClick=-1}
 
+
+---@field [parent=#lib.graphic] lib.reactor#lib.reactor reactor
+
+--- Initialize new Graphic object
+-- @function [parent=#lib.graphic] new
+-- @param #lib.graphic self
+-- @param #string o Text to be displayed
+-- @return lib.graphic#lib.graphic
 function Graphic:new(o)
   if type(o)=="string" then
   o = {text = o,width = string.len(o)} end
@@ -20,9 +28,24 @@ function Graphic:setBackgroundColor(c)
 end
 
 function Graphic:setOnSelect(ui,handler)
-  self.reactor:register("mouse_up",handler)
+  local function mouseHandler(type,id,button,x,y)
+    if type == "mouse_click" then
+      self.lastClick = id
+    elseif type == "mouse_up" then
+      if id == self.lastClick then
+        self.reactor:handleEvent("selected")
+      end
+    end
+  end
+  self.reactor:register("mouse_up",mouseHandler)
+  self.reactor:register("mouse_click",mouseHandler)
   self.reactor:register("monitor_touch",handler)
+  self.reactor:register("selected",handler)
   ui:register(self,"clickable")
+end
+
+function Graphic:setJustOnSelect(ui,handler)
+  self.reactor:register("selected",handler)
 end
 
 function Graphic:getSize(width)
@@ -54,6 +77,14 @@ function Graphic:getTextFromLine(line,width)
   else
     return nil
   end
+end
+
+function Graphic:align(pos)
+  self.myAlignment = pos
+end
+
+function Graphic:alignment()
+  return self.myAlignment
 end
 
 function Graphic:onMe(x,y)

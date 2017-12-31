@@ -1,7 +1,7 @@
 local ui_server = require 'ui_server'
 local gen_server = require 'gen_server'
-local Reactor = require 'reactor'
-local Graphic = require 'graphic'
+local Reactor = require 'lib.reactor'
+local Graphic = require 'lib.graphic'
 
 local Bar = {buffer = 512,line = 1}
 
@@ -38,6 +38,8 @@ local function msgHandler(Bar)
     MSG_CNT = MSG_CNT + 1
     local n = 0
     if string.find(string.lower(str),'error') then
+-- Uncomment to catch silent errors.
+--    error(str)
       n = Bar.ui:add(Graphic:new({text = MSG_CNT.." "..str,textColor=colors.red}))
     else
       n = Bar.ui:add(Graphic:new(MSG_CNT.." "..str))
@@ -94,7 +96,6 @@ function Bar.handle_cast(Request,bar)
 end
 
 function Bar:write(msg)
---  self.ui:add(Graphic:new(msg))
   gen_server.cast(self.Co,{"message",msg})
 end
 

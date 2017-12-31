@@ -1,16 +1,36 @@
-local luaunit = require 'luaunit'
+local luaunit = require 'lib.luaunit'
 local gen_server = require 'gen_server'
-local Graphic = require 'graphic'
+local Graphic = require 'lib.graphic'
 local ui_sup = require 'ui_supervisor'
-local Panel, List = require 'ui_obj'
-local Menu = require "ui_menu"
+local Panel, List = require 'lib.ui_obj'
+local Menu = require "lib.ui_menu"
 
 local Client = {}
+
+function Client.start(Co)
+  if not VM.registered("observer") then
+    gen_server.start(Client,{Co},{},"observer")
+  end
+end
+
+function Client.init(Co)
+  Client.observerUI(Co)
+  return true, {}
+end
+
+function Client.handle_cast(Request,State)
+  local event = Request[1]
+  if event == "die" then
+    VM.exit("normal")
+  else
+    VM.log("observer got unkown event")
+  end
+  return State
+end
 
 local threads = {}
 local names = {}
 local ui
-local alive = false
 
 local function updateThreads()
   for name,thread in pairs(VM.coroutines) do
@@ -57,10 +77,7 @@ local function onThreadFocus(thread,pane)
   end
 end
 
-function Client.observerUI(Co)
-  if alive then return end
-  alive = true
-  
+function Client.observerUI(Co)  
   ui = ui_sup.newWindow(Co,40,15)
   ui:setBackground(colors.gray)
   ui:setText(colors.lightGray)
@@ -80,16 +97,15 @@ function Client.observerUI(Co)
   infoPanel:setTextColor(colors.lightGray)
   
   local t = Graphic:new("Observer")
-  t.align="center"
+  t:align("center")
   t:setBackgroundColor(colors.gray)
   t:setTextColor(colors.lightGray)
   
   local function kill()
     threads={}
     names={}
-    gen_server.cast(Co,{"remove",ui})
+    gen_server.cast("observer",{"die"})
     ui = nil
-    alive = false
   end
   
   t:setOnSelect(ui,kill)

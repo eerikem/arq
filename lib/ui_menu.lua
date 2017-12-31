@@ -1,4 +1,4 @@
-local Panel, List = require 'ui_obj'
+local Panel, List = require 'lib.ui_obj'
 
 local menuIndex = 0
 
@@ -109,11 +109,18 @@ function Menu:dec()
   end
 end
 
+local function sendFocus(obj)
+  if obj.reactor:handling("focus") then
+    obj.reactor:handleEvent("focus")
+  end
+end
+
 local function focusHandler(ui,menu)
   return function(event,button,x,y)
+--    VM.log("Menu got mouse click")
     if event == "monitor_touch" then
       y = x x = button button = nil 
-      VM.log("Menu got touch")
+--      VM.log("Menu got touch")
     elseif button == 3 then
     --TODO monitorTouch seperate handler?
       return VM.log("Got button 3")
@@ -121,7 +128,7 @@ local function focusHandler(ui,menu)
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
         menu.focus = menu.content[obj]
-        obj.reactor:handleEvent("focus")
+        sendFocus(obj)
         ui:update()
         if event == "monitor_touch" then
           return obj.reactor:handleEvent("selected")
@@ -131,12 +138,27 @@ local function focusHandler(ui,menu)
   end
 end
 
+--TODO optimize drag handling for menu
+local function dragHandler(ui,menu)
+  return function(_,click,button,x,y)
+    x,y = ui:relativeXY(x,y)
+    for _,obj in ipairs(menu.index) do
+      if obj:onMe(x,y) then
+        menu.focus = menu.content[obj]
+        sendFocus(obj)
+        ui:update()
+      end
+    end
+  end
+end
+
 local function mouseUpHandler(ui,menu)
   return function(_,button,x,y)
+--    VM.log("Menu got mouse up")
     if button == 3 then return end
     for _,obj in ipairs(menu.index) do
       if obj:onMe(x,y) then
-        VM.log("Sending selected to menu item"..menu.content[obj])
+--        VM.log("Sending selected to menu item"..menu.content[obj])
         return obj.reactor:handleEvent("selected")
       end
     end
@@ -147,10 +169,10 @@ local function scrollHandler(ui,menu)
   return function(_,direction)
     if direction == "scroll_up" then
       menu:dec()
-      menu.index[menu.focus].reactor:handleEvent("focus")
+      sendFocus(menu.index[menu.focus])
     elseif direction == "scroll_down" then
       menu:inc()
-      menu.index[menu.focus].reactor:handleEvent("focus")
+      sendFocus(menu.index[menu.focus])
     else
       error("bad scroll event")
     end
@@ -162,11 +184,11 @@ local function keyHandler(ui,menu)
   return function(_,key)
     if key == keys.up then
       menu:dec()
-      menu.index[menu.focus].reactor:handleEvent("focus")
+      sendFocus(menu.index[menu.focus])
       ui:update()
     elseif key == keys.down then
       menu:inc()
-      menu.index[menu.focus].reactor:handleEvent("focus")
+      sendFocus(menu.index[menu.focus])
       ui:update()
     elseif key == keys.enter then
       return menu.index[menu.focus].reactor:handleEvent("selected")
@@ -181,6 +203,7 @@ function Menu:link(ui)--TODO add link to all objects and call automaticaly in ad
   --self.reactor:register("selected",itemSelected)
   ui:register(self,"keys")
   ui:register(self,"scroll")
+  ui:register(dragHandler(ui,self),"draggable")
   self.reactor:register("scroll",scrollHandler(ui,self))
   --TODO overwriting reactor handlers?! automatic or not
 --  self.reactor.handlers["selected"]=focusHandler(ui,self)

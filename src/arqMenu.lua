@@ -1,8 +1,8 @@
 local gen_server = require 'gen_server'
 local supervisor = require 'supervisor'
-local Graphic = require 'graphic'
-local Menu = require 'ui_menu'
-local luaunit = require 'luaunit'
+local Graphic = require 'lib.graphic'
+local Menu = require 'lib.ui_menu'
+local luaunit = require 'lib.luaunit'
 local ui_sup = require 'ui_supervisor'
 local Observer = require "observer"
 
@@ -26,7 +26,7 @@ local function initUI()
   
   title:setBackgroundColor(colors.lightGray)
   title:setTextColor(colors.gray)
-  title.align="center"
+  title:align("center")
   title.width = "max"
   title.ypos = 2
   
@@ -43,11 +43,11 @@ local function initUI()
   
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
-  
+  ui:align("center","left")
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
-  shutdown.reactor:register("selected",function()os.queueEvent("terminate")end)
-  observer.reactor:register("selected",function()VM.spawn(function()Observer.observerUI("terminal")end)end)
+  shutdown.reactor:register("selected",function()gen_server.stop("arq_sup","shutdown")end)
+  observer.reactor:register("selected",function()Observer.start("terminal")end)
   ui:update()
   return ui
 end

@@ -1,11 +1,26 @@
-local Reactor = require 'reactor'
-local Graphic = require 'graphic'
+local Reactor = require 'lib.reactor'
+local Graphic = require 'lib.graphic'
 local panelIndex = 0
 local protoIndex = 0
 local Panel = {xpos=1,ypos=1,id="panel",height = 0,width = 0,absX = 0, absY= 0,noscroll = false}
 
 local proto = {id="proto"}
 
+---
+--@module Panel
+--@return #Panel, #List
+
+
+---@field [parent=#Panel] lib.reactor#lib.reactor reactor
+
+---
+--@type List
+--@extends #Panel 
+
+--- Initialize a new Panel
+-- @function [parent=#Panel] new
+-- @param #Panel self
+-- @return #Panel
 function Panel:new()
   --content is a dictionary, index an ordered List
   local o = {content = {},index = {},layout="list"}
@@ -15,10 +30,24 @@ function Panel:new()
   o.id="panel"..panelIndex
   panelIndex = panelIndex + 1
   o.proto = proto:new()
---  o:registerPanelHandlers()
+--  o:registerPanelHandlers() --deprecated
   return o
 end
 
+--- Check if Panel contains obj
+-- @function [parent=#Panel] contains
+-- @param #Panel self
+-- @param obj
+-- @return #boolean
+function Panel:contains(obj)
+  if self.content[obj] then
+    return true
+  else
+    return false
+  end
+end
+
+-- TODO PanelHandlers deprecated
 function Panel:registerPanelHandlers()
   local handler = function(_,button,x,y)
     local pos = (self.ypos - 1)
@@ -35,6 +64,12 @@ function Panel:registerPanelHandlers()
   self.reactor:register("selected",handler)
 end
 
+---
+--@function [parent=#Panel] onMe
+--@param #Panel self
+--@param #number x
+--@param #number y
+--@return #boolean
 function Panel:onMe(x,y)
   local indentX = self.xpos - 1
   local indentY = self.ypos - 1
@@ -148,7 +183,7 @@ function proto:write(ui,noscroll)
       ui.term.setCursorPos(x,h)
     end
   end
-  if self.align == "center" then
+  if self:alignment() == "center" then
     counter = ui:printCentered(self.text,y,0,noscroll)
   else
     counter = ui:write(self.text,noscroll)
@@ -415,7 +450,6 @@ function Panel:setContent(...)
 end
 
 function Panel:remove(c)
---TODO shift index values in self.content?!?
   if self.content[c] then
     local pos = self.content[c]
     table.remove(self.index,pos)
@@ -431,6 +465,8 @@ function Panel:remove(c)
     end
     
     return pos
+  else
+    error("object was not found in this Panel",2)
   end
   return nil
 end

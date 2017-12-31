@@ -1,7 +1,7 @@
 local gen_server = require "gen_server"
 local statusBar = require "statusBar"
 local ui_server = require "ui_server"
-local Reactor = require "reactor"
+local Reactor = require "lib.reactor"
 
 local Server = {}
 
@@ -133,6 +133,12 @@ function Server.newWindow(name,w,h)
     return ui_server.newWindow(Uis[name],w,h)
   else
     error("Error: "..name.." not found.",2)
+  end
+end
+
+function Server.terminate(Reason,State)
+  for name,Co in pairs(State.uis) do
+    gen_server.stop(Co,Reason)
   end
 end
 

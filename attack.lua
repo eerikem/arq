@@ -1,10 +1,10 @@
 local gen_server = require "gen_server"
-local Bundle = require "bundle"
-local Panel = require "ui_obj"
-local Menu = require "ui_menu"
-local Group = require "group"
+local Bundle = require "lib.bundle"
+local Panel = require "lib.ui_obj"
+local Menu = require "lib.ui_menu"
+local Group = require "lib.group"
 local ui_server = require "ui_server"
-local Graphic = require "graphic"
+local Graphic = require "lib.graphic"
 
 local CABLE_SIDE = "back"
 local MONITOR = "monitor_5"
@@ -147,7 +147,7 @@ local function attackUI()
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
   local title = Graphic:new("Attack Control")
-  title.align= "center"
+  title:align("center")
   title.ypos = 2
   
   local doorButton = Graphic:new("Open Door")

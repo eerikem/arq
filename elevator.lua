@@ -1,9 +1,10 @@
 local gen_server = require "gen_server"
-local ui_server = require "ui_server"
-local Graphic = require "graphic"
-local Bundle = require "bundle"
-local Radio = require "ui_radio_panel"
-local Panel = require "ui_obj"
+local UI = require "lib.ui"
+local Graphic = require "lib.graphic"
+local Bundle = require "lib.bundle"
+local Radio = require "lib.ui_radio_panel"
+local ButtonPanel = require "lib.ui_button_panel"
+local Panel = require "lib.ui_obj"
 
 local CABLE_SIDE = "back"
 local cables = {
@@ -14,7 +15,7 @@ local cables = {
 local Elevator = {}
 
 local function elevatorUI(Co,floor)
-  local ui = ui_server.newWindow(Co,7,5)
+  local co, ui = UI.start(Co,7,5)
   
   local floors = Radio:new()
   local lvl1 = Graphic:new("1")
@@ -51,7 +52,7 @@ local function elevatorUI(Co,floor)
   button3.xpos = 6
   button3.ypos = 2
   
-  local buttonPanel = Radio:new()
+  local buttonPanel = ButtonPanel:new()
   
   local handler = function(button)
     return function ()
@@ -67,8 +68,12 @@ local function elevatorUI(Co,floor)
   denied.xpos = 2
   denied.ypos = 2
   denied:setTextColor(colors.red)
+  local erroring = false
   local errorHandler = function(button)
     return function()
+      if erroring then
+        return end
+      erroring = true
       local lvl = buttonPanel.content[button]
       VM.log("Button for "..lvl.." pressed!")
       ui:beep()
@@ -79,6 +84,7 @@ local function elevatorUI(Co,floor)
         EVE.sleep(1)
         buttonPanel:remove(denied)
         ui:update()
+        erroring = false
       end
       VM.spawn(fun)
     end
@@ -146,7 +152,7 @@ local function elevatorUI(Co,floor)
 end
 
 local function callPanelUI(Co,floor)
-  local ui = ui_server.newWindow(Co,7,5)
+  local co,ui = UI.start(Co,7,5)
   
   ui:setBackground(colors.lightGray)
   ui:setText(colors.gray)
@@ -162,7 +168,18 @@ local function callPanelUI(Co,floor)
   callButton.xpos = 3
   callButton.ypos = 2 
   
-  body:setOnSelect(ui,function() Elevator.callTo(floor,callButton) end)
+  
+  local called = false
+  local function callReq()
+    if not called then
+      called = true
+      ui:ping()
+      callButton:setTextColor(colors.white)
+      ui:update()
+      Elevator.callTo(floor,co)
+    end
+  end
+  body:setOnSelect(ui,callReq)
   
   body:add(callButton)
   body:setHeight(3)
@@ -171,6 +188,15 @@ local function callPanelUI(Co,floor)
   ui:add(title)
   ui:add(body)
   ui:update()
+  
+  local function handleOpened()
+    called = false
+    callButton:setTextColor(colors.green)
+    ui:update()
+  end
+  
+  UI.register(co,"opened",handleOpened)
+  
   return ui, callButton
 end
 
@@ -189,7 +215,8 @@ function Elevator.init()
           elevators = {{callPanels = {{ui = ui2,button = call},
                                      {ui = ui3,button = call2}},
                        floorPanels = {{ui = ui,floors = floors,buttons = buttons}},
-                       floor = floor}}}
+                       floor = floor,
+                       queue={},dest={},destButton={}}}}
 end
 
 function Elevator.handle_call(Request,From,State)
@@ -202,12 +229,87 @@ function Elevator.callTo(floor,button)
   gen_server.cast("elevator",{"call",floor,button})
 end
 
+function Elevator.openDoor()
+  gen_server.cast("elevator",{"openDoor"})
+end
+--
+--function Elevator.moveTowards(dest)
+--  gen_server.cast("elevator",{"move",dest})
+--end
+
 local function setFloor(lift,level)
   VM.log("Setting floor to "..level)
   for _,liftPanel in ipairs(lift.floorPanels) do
     liftPanel.floors:setSelected(level)
     liftPanel.ui:update()
   end
+end
+
+local function callToCurrentFloor(lift)
+  lift.callPanels[1].ui.tap()
+  lift.movingTo = lift.floor
+  EVE.queue("openDoor",0.5)
+end
+
+local function openDoor(lift,State)
+  State.cables.white:enable()
+  lift.doorOpen = true
+  --notify call button if applicable
+  if State.button then
+    UI.handleEvent(State.button,"opened")
+    State.button = nil
+  end
+  --reset button panel
+  local buttonPanel = lift.floorPanels[1]
+  if lift.movingTo then
+    buttonPanel.buttons:deselect(lift.movingTo)
+    lift.movingTo=nil
+  end
+  buttonPanel.ui:update()
+  
+  State.ref = EVE.queue("closeDoor",4)
+end
+
+local function queueFloor(lift,dest,button)
+  if not lift.dest[dest] then
+    table.insert(lift.queue,dest)
+    lift.dest[dest]=true
+    if button then
+      lift.destButton[dest]=button
+    end
+  end
+end
+
+local function callToOtherFloor(lift,dest)
+  if lift.doorOpen then
+    queueFloor(lift,dest)
+    return
+  end
+  local buttonPanel = lift.floorPanels[1]
+  lift.callPanels[1].ui.ping()--todo replace with intelligent ping
+  lift.movingTo = dest  
+  EVE.queue("move",0.5)
+end
+
+local function nextFloor(lift)
+  local dest = lift.movingTo
+  if dest < lift.floor then
+    lift.floor = lift.floor - 1
+    setFloor(lift,lift.floor)
+  else
+    lift.floor = lift.floor + 1
+    setFloor(lift,lift.floor)
+  end
+  if lift.floor == dest then
+    EVE.queue("openDoor",1)
+  else
+    EVE.queue("move",2)
+  end
+end
+
+local function closeDoor(State)
+    State.cables.white:disable()
+    State.elevators[1].doorOpen = false
 end
 
 function Elevator.handle_cast(Request,State)
@@ -217,41 +319,40 @@ function Elevator.handle_cast(Request,State)
     local button = Request[3]
     VM.log("Floor "..dest.." called lift")
     local lift = State.elevators[1]
-    if button then button:setTextColor(colors.white)
-      for _,panel in ipairs(lift.callPanels) do panel.ui:update() end
-    end
-    if dest == lift.floor then
-      lift.callPanels[1].ui.tap()
-      EVE.sleep(1)
-      local buttonPanel = lift.floorPanels[1]
-      buttonPanel.buttons:noneSelected()
-      buttonPanel.ui:update()
-    else
-      local buttonPanel = lift.floorPanels[1]
-      lift.callPanels[1].ui.ping()--todo replace with intelligent ping
-      EVE.sleep(1)
-      buttonPanel.buttons:noneSelected()
-      buttonPanel.ui:update()
-      VM.log(dest.." "..lift.floor)
-      if dest < lift.floor then
-        for i=lift.floor,dest,-1 do
-          setFloor(lift,i)
-          EVE.sleep(2)
-        end
+    --if moving queue request
+    if lift.movingTo then
+      if lift.movingTo ~= dest then
+        queueFloor(lift,dest,button)
       else
-        for i=lift.floor,dest,1 do
-          setFloor(lift,i)
-          EVE.sleep(2)
+        if button then
+          State.button = button
         end
       end
-      lift.floor = dest
+    else
+      State.button = button
+      if dest == lift.floor then
+        callToCurrentFloor(lift)
+      else
+        callToOtherFloor(lift,dest,State)
+      end
     end
-    State.cables.white:enable()
-    if button then button:setTextColor(colors.green)
-      for _,panel in ipairs(lift.callPanels) do panel.ui:update() end
+  elseif event == "move" then
+    nextFloor(State.elevators[1])
+  elseif event == "openDoor" then
+    openDoor(State.elevators[1],State)
+  elseif event == "closeDoor" then
+    local lift = State.elevators[1]
+    if State.ref == Request[2] then
+      closeDoor(State)
+      --TODO intelligent pulling from queue
+      local dest = table.remove(lift.queue,1)
+      if dest then
+        lift.dest[dest] = nil
+        Elevator.callTo(dest,lift.destButton[dest])
+      end
+    else
+      VM.log("Waiting for next close door signal")
     end
-    EVE.sleep(5)
-    State.cables.white:disable()
   end
   return State
 end

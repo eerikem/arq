@@ -5,17 +5,17 @@ local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 
 local CABLE_SIDE = "back"
-local DELAY = 4
+local DELAY = 7
 local DOOR_DELAY = 3
-local MIDDLE = "monitor_5"
+local MIDDLE = "monitor_76"
 local doors = {
-  outer = Bundle:new(CABLE_SIDE,colors.lightBlue,"monitor_1"),
-  inner = Bundle:new(CABLE_SIDE,colors.lime,"monitor_3")
+  outer = Bundle:new(CABLE_SIDE,colors.magenta,"monitor_74"),
+  inner = Bundle:new(CABLE_SIDE,colors.white,"monitor_75")
   }
-local LEFT = "outer"
-local RIGHT = "inner"
-local x,y,z = 98,79,30
-local SOUND = "/playsound frontierdevelopment:event.event_airlock_norm @a[%d,%d,%d,2]"
+local LEFT = "inner"
+local RIGHT = "outer"
+local x,y,z = -60,72,126
+local SOUND = "/playsound fdi:event.airlock_large @a[%d,%d,%d,3]"
 
 local function initDoors(doors)
 --  VM.log("Running initDoors")
@@ -224,7 +224,7 @@ local function outerUI(Co,door)
       if reactor.parent == open then
         local res = Airlock.open(Co,door)
         if res == "open" then
-          ui:ping()
+          ui:tap()
           enable(close)
         elseif res == "opening" then
           ui:tap()
@@ -236,7 +236,7 @@ local function outerUI(Co,door)
       elseif reactor.parent == close then
         local res = Airlock.close(Co,door)
         if res == "closing" then
-          ui:ping()
+          ui:tap()
           enable(open)
         else
           ui:tap()

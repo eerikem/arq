@@ -9,12 +9,13 @@ local Observer = require "observer"
 local ArqMenu = {}
 
 local function initUI()
-  local ui = ui_sup.newWindow("terminal",15,7)
+  local ui = ui_sup.newWindow("terminal",15,8)
   local title = Graphic:new("ARQ Controls")
   
   local crash = Graphic:new("Kill Menu")
   local run = Graphic:new("Run Program")
   local observer = Graphic:new("Observer")
+  local reboot = Graphic:new("Reboot")
   local shutdown = Graphic:new("Shutdown")
   
   local menu = Menu:new()
@@ -22,6 +23,7 @@ local function initUI()
   menu:add(crash)
   menu:add(run)
   menu:add(observer)
+  menu:add(reboot)
   menu:add(shutdown)
   
   title:setBackgroundColor(colors.lightGray)
@@ -47,6 +49,7 @@ local function initUI()
   VM.log("attaching crash to ui")
   crash.reactor:register("selected",ArqMenu.crash)
   shutdown.reactor:register("selected",function()gen_server.stop("arq_sup","shutdown")end)
+  reboot.reactor:register("selected",function()os.reboot()end)
   observer.reactor:register("selected",function()Observer.start("terminal")end)
   ui:update()
   return ui

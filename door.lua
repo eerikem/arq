@@ -64,7 +64,7 @@ end
 function Door.newUI(monitor,title,door,password)
   if not monitor then error("Badarg: monitor",2) end
   local title = title or "ACCESS"
-  return doorUI.start_link(monitor,{title=title},door,Door,password)
+  return doorUI.start_link(monitor,title,door,Door,password)
 end
 
 function Door.open(door)

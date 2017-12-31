@@ -5,7 +5,7 @@
 local gen_server = require "gen_server"
 local ui_server = require "ui_server"
 local PerphListener={}
-local luaunit = require "luaunit"
+local luaunit = require "lib.luaunit"
 
 local peripheralName = "toggler"
 

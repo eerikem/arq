@@ -39,7 +39,7 @@ local require = function(name)
   end
   
   local function loadFile(file)
-    print("loading "..file)
+--    print("loading "..file)
     local modules = {dofile(file)}
     loadedFiles[file] = {modules}
     stopLoading()

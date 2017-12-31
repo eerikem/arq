@@ -1,5 +1,8 @@
 local function checkFileExists(path)
-  return fs.exists(path)
+  if fs.exists(path) and not fs.isDir(path) then 
+    return true
+  end
+  return false
 end
 
 local require = function(name)
@@ -33,6 +36,7 @@ local require = function(name)
   end
   
   local function loadFile(file)
+    print("loading "..file)
     local modules = {dofile(file)}
     loadedFiles[file] = {modules}
     stopLoading()

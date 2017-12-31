@@ -46,6 +46,7 @@ local Observer = require "observer"
 local Door = require "door"
 local Manager = require "door_manager"
 local toggler = require "perphListener"
+local apps = require 'apps'
 
 VM.init()
 
@@ -57,13 +58,14 @@ toggler.start()
 uiMenu:new("terminal")
 arqMenu.start()
 
-
+apps.start()
 
 --Attack.start()
 --Teleport.start()
 --Elevator.start()
 --Airlock.start()
---local doors = {Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
+--local doors = {
+--Door.startDetectorDoor(colors.white,colors.black,"monitor_0","Room 51"),
 --Door.startMonitorDoor(colors.yellow,"monitor_1","monitor_2","ADMIN"),
 --Door.startFakeDoor("monitor_3","DENIED")}
 --Manager.start(doors)

@@ -3,9 +3,13 @@ local Panel = require 'ui_obj'
 
 local UI = {}
 
-local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
-local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
-local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+--local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
+--local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
+--local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
+
+local tapSound = "/playsound fdi:event.montouch @p"
+local selectSound = "/playsound fdi:event.monaccept @p"
+local errorSound = "/playsound fdi:event.mondecline @p"
 
 function UI:beep()
   exec(errorSound)

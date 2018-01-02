@@ -159,7 +159,7 @@ local function setTimer(State)
 end
 
 
-local function bayDoorTimer(callback,siloDelay,State)
+local function bayDoorTimer(callback,siloDelay)
   local time = 0
   local r,sleep,reverse = VM.receive()
   if r == "start" then
@@ -201,7 +201,7 @@ local function cargoOpen(State)
     State.opening = false
     State.open = true
     State.timer = nil end
-  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time,State)end)
+  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time)end)
   if State.closing then
     VM.send(State.timer,"stop_timer",newTimer)
     State.timer = newTimer
@@ -214,7 +214,7 @@ end
 local function cargoClose(State)
   State.openCable:disable()
   State.closeCable:enable()
-  notify(State,"closed")
+  notify(State,"closing")
   State.closing = true
   State.open = false
 
@@ -222,8 +222,10 @@ local function cargoClose(State)
     State.closeCable:disable()
     State.closing = false
     State.closed = true
-    State.timer = nil end
-  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time,State)end)
+    State.timer = nil
+    notify(State,"closed")
+  end
+  local newTimer = VM.spawn(function()bayDoorTimer(fun,State.time)end)
   if State.opening then
     VM.send(State.timer,"stop_timer",newTimer)
     State.timer = newTimer

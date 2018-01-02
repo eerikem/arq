@@ -32,7 +32,7 @@ UI = require 'lib.ui_lib'
 --Run ARQ--
 -----------
 
-
+luaunit = require 'lib.luaunit'
 local supervisor = require 'supervisor'
 local arqSup = require 'arq_sup'
 local ui_sup = require 'ui_supervisor'

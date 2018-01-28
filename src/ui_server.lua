@@ -270,6 +270,18 @@ function Server.init(term,name)
              windows=windows,events={},producer=Prod:new(),
              monitors={},parents={}
              }
+  if CONFIG[name] then
+    o.coords = CONFIG[name]
+    o.playSound = function(cmd)
+       exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
+          cmd,
+          o.coords[1],
+          o.coords[2],
+          o.coords[3],
+          o.coords[4]
+        )
+    end
+  end
   o.reactor = Reactor:new(o)
   for event,handler in pairs(UI_Events) do
     o.reactor:register(event,handler)
@@ -290,7 +302,7 @@ local function newWindow(State,Co,w,h)
   ui.redraw = function(self)
     gen_server.cast(Co,{"update",self})
   end
-  
+  ui.playSound = State.playSound
   ui.redraw_sync = function(self)
     local Msg = gen_server.call(Co,{"update",self})
     if Msg ~= "ok" then error("Problem got: "..Msg) end
@@ -347,6 +359,19 @@ function Server.handle_cast(Request,State)
       State.monitors[ref] = nil
       removeUI(State,Request[2])
       redrawStack(State)
+    elseif event == "play_sound" then
+      local cmd = Request[2]
+      if State.coords then
+        exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
+          cmd,
+          State.coords.x,
+          State.coords.y,
+          State.coords.z,
+          State.coords.radius
+        )
+      else
+        exec(string.format("playsound %s @p",cmd))
+      end
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --TODO generic event subscriber handler
@@ -375,10 +400,17 @@ function Server.handle_info(Request,State)
     State.monitors[ref]=nil
     removeUI(State,ui)
     redrawStack(State)
+  elseif event == "EXIT" then
+    VM.log("Warning UI server handleInfo got EXIT?!")
   else
     VM.log("Warning UI server handleInfo got "..event)
   end
   return State
+end
+
+function Server.playSound(Co,sound)
+  if not sound or type(sound) ~= "string" then error("badarg",2) end
+  gen_server.cast(Co,{"play_sound",sound})
 end
 
 function Server.listen(Co,event,co)

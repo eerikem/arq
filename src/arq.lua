@@ -51,7 +51,12 @@ local apps = require 'apps'
 local status_ui = require "status_ui"
 local Door = require "door"
 local door_ui = require "door_ui"
+local ui_coordinator = require "ui_coordinator"
+local config = require "config"
+
 VM.init()
+
+CONFIG = config.load()
 
 supervisor.start_link(arqSup,{},"arq_sup")
 VM.log = ui_sup.statusWindow("terminal")
@@ -59,6 +64,9 @@ VM.log = ui_sup.statusWindow("terminal")
 toggler.start()
 
 uiMenu:new("terminal")
+
+ui_coordinator.start("top")
+ui_coordinator.start("monitor_0")
 
 arqMenu.start()
 apps.start()

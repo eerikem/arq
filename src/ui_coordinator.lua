@@ -8,9 +8,10 @@ local Bundle = require "lib.bundle"
 local Door = require 'door'
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
+local config = require "config"
 
 local DEFAULT_RADIUS = 6
-
+local LOCATE = "locate %s"
 ---An app for caching xyz coords for monitor sounds
 --@module ui_coordinator
 local Client = {}
@@ -104,10 +105,25 @@ function Client.init(monitor)
   local ui, panel, rButton = securityUI(monitor,VM.running())
   return true, {
     ui = ui,
+    monitor = monitor,
     panel = panel,
     rButton = rButton,
     radius = DEFAULT_RADIUS
     }
+end
+
+function Client.stop(Co)
+  gen_server.cast(Co,{"stop"})
+end
+
+local function setCoords(State,myString)
+--ArqiTek is at -1, 12, -421 in dim 0 with gamemode creative
+  local x,y,z = string.match(myString,"is at ([\-0-9]+), ([\-0-9]+), ([\-0-9]+) in dim")
+  State.x = tonumber(x)
+  State.y = tonumber(y)
+  State.z = tonumber(z)
+  CONFIG[State.monitor]={State.x,State.y,State.z,State.radius}
+  config.save(CONFIG)
 end
 
 function Client.handle_call(Request,From,State)
@@ -122,7 +138,10 @@ function Client.handle_cast(Request,State)
   VM.log("Got "..event)
   if event == "get_user_xyz" then
     local user = Request[2]
-    
+    VM.log("Attempting: "..string.format(LOCATE,user))
+    EVE.subscribe("task_complete")
+    State.cmdId = commands.execAsync(string.format(LOCATE,user))
+    VM.log("got id: "..State.cmdId)
     updatePanel(State)
   elseif event == "set_radius" then
     local radius = Request[2]
@@ -132,6 +151,17 @@ function Client.handle_cast(Request,State)
     else
       VM.log("Received bad radius")
     end
+  elseif event == "task_complete" then
+    local event, id, success, error, payload= unpack(Request)
+    if id == State.cmdId and success then
+      if string.match(payload[1],"does not exist") then
+        VM.log(payload[1])
+        State.ui:beep()
+      else
+          setCoords(State,payload[1])
+          EVE.unsubscribe("task_complete")
+      end
+    end
   elseif event == "left" then
     State.radius = State.radius - 1
     updatePanel(State)
@@ -139,8 +169,13 @@ function Client.handle_cast(Request,State)
     State.radius = State.radius + 1
     updatePanel(State)
   elseif event == "radius" then
-    State.radius = State.radius + 10
+    State.radius = State.radius + 5
     updatePanel(State)
+  elseif event == "ok" then
+    State.ui:ping()
+    VM.exit("normal")
+  elseif event == "stop" then
+    VM.exit("normal")
   end
   return State
 end

@@ -20,9 +20,6 @@ function Server.start_link()
   return gen_server.start_link(Server,{},{},"events")
 end
 
---TODO handle task complete event?
-local function todo() end
-
 local UI_Events = {
   char = ui_sup.sendOsEvent,
   key = ui_sup.sendOsEvent,
@@ -33,8 +30,7 @@ local UI_Events = {
   mouse_scroll = ui_sup.sendOsEvent,
   monitor_touch = ui_sup.sendOsEvent,
   monitor_resize = ui_sup.sendOsEvent,
-  term_resize = ui_sup.sendOsEvent,
-  task_complete = todo
+  term_resize = ui_sup.sendOsEvent
 }
 
 local function clickHandler(server)
@@ -81,6 +77,8 @@ function Server.handle_cast(Request,State)
   local event = Request[1]
   if event=="subscribe" then
     HashArrayInsert(State,Request[3],Request[2])
+  elseif event=="unsubscribe" then
+    HashArrayRemoveValue(State,Request[3],Request[2])
   elseif UI_Events[event] or event == "mouse_click"
     or event == "mouse_up" or event == "mouse_drag" then
     State.reactor:handleEvent(unpack(Request))
@@ -110,6 +108,13 @@ function Server.handle_cast(Request,State)
     local side = Request[2]
     if peripheral.getType(side)=="monitor" then
       ui_sup.sendOsEvent(event,side)
+    end
+  elseif event == "task_complete" then
+--  TODO optimise task_complete
+    if State["task_complete"] then
+      for _,Co in ipairs(State["task_complete"]) do
+        gen_server.cast(Co,Request)
+      end
     end
   elseif State[event] then
     for _,Co in ipairs(State[event]) do
@@ -161,6 +166,12 @@ function Server.subscribe(event,Co)
   local Co = Co or VM.running()
   if not VM.coroutines[Co] then error("badarg Co",2) end
   gen_server.cast("events",{"subscribe",Co,event})
+end
+
+function Server.unsubscribe(event,Co)
+  local Co = Co or VM.running()
+  if not VM.coroutines[Co] then error("badarg Co",2) end  
+  gen_server.cast("events",{"unsubscribe",Co,event})
 end
 
 function Server.subscriber(Co,Module)

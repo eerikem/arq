@@ -67,10 +67,6 @@ toggler.start()
 
 uiMenu:new("terminal")
 
-door_ui.start_link("top","HELL-o!")
---ui_coordinator.start("top")
---ui_coordinator.start("monitor_0")
-
 arqMenu.start()
 apps.start()
 

@@ -259,6 +259,22 @@ local function initNativeUI(term,name)
   return ui
 end
 
+function Server.assignCoord(monitor,x,y,z,r)
+  gen_server.cast(monitor,{"load_coord"})
+end
+
+-- Returns true if successful false otherwise
+local function loadCoords(State)
+  if CONFIG[State.name] then
+    State.coords[1] = CONFIG[State.name][1]
+    State.coords[2] = CONFIG[State.name][2]
+    State.coords[3] = CONFIG[State.name][3]
+    State.coords[4] = CONFIG[State.name][4]
+    return true
+  end
+  return false
+end
+
 function Server.init(term,name)
 
   local ui = initNativeUI(term,name)
@@ -268,20 +284,28 @@ function Server.init(term,name)
   --TODO reactor sends events to coroutine handlers
   local o = {native = term, ui = ui,focus = ui,background = ui,
              windows=windows,events={},producer=Prod:new(),
-             monitors={},parents={}
+             monitors={},parents={},name = name
              }
-  if CONFIG[name] then
-    o.coords = CONFIG[name]
-    o.playSound = function(cmd)
-       exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
-          cmd,
-          o.coords[1],
-          o.coords[2],
-          o.coords[3],
-          o.coords[4]
-        )
+             
+  o.coords = {}
+  o.playSound = function(cmd)
+    local next = next
+    if next (o.coords) ~= nil then
+      exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
+        cmd,
+        o.coords[1],
+        o.coords[2],
+        o.coords[3],
+        o.coords[4]
+      )
+    else
+      exec("playsound %s @p",cmd)
     end
   end
+  if not loadCoords(o) then
+    gen_server.cast("ui_sup",{"run_coordinator",name})
+  end
+  
   o.reactor = Reactor:new(o)
   for event,handler in pairs(UI_Events) do
     o.reactor:register(event,handler)
@@ -310,8 +334,12 @@ local function newWindow(State,Co,w,h)
   
   ui.bump = bump
   ui.leave = leave
-  ui:bump(State.focus)
-  State.focus = ui 
+  if State.focus.alwaysOnTop then
+    ui:bump(State.focus.last)
+  else
+    ui:bump(State.focus)
+    State.focus = ui
+  end
   return ui
 end
 
@@ -359,19 +387,22 @@ function Server.handle_cast(Request,State)
       State.monitors[ref] = nil
       removeUI(State,Request[2])
       redrawStack(State)
-    elseif event == "play_sound" then
-      local cmd = Request[2]
-      if State.coords then
-        exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
-          cmd,
-          State.coords.x,
-          State.coords.y,
-          State.coords.z,
-          State.coords.radius
-        )
-      else
-        exec(string.format("playsound %s @p",cmd))
-      end
+    elseif event == "load_coord" then
+      loadCoords(State)
+--TODO deprecated
+--    elseif event == "play_sound" then
+--      local cmd = Request[2]
+--      if State.coords then
+--        exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
+--          cmd,
+--          State.coords.x,
+--          State.coords.y,
+--          State.coords.z,
+--          State.coords.radius
+--        )
+--      else
+--        exec(string.format("playsound %s @p",cmd))
+--      end
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --TODO generic event subscriber handler
@@ -401,7 +432,11 @@ function Server.handle_info(Request,State)
     removeUI(State,ui)
     redrawStack(State)
   elseif event == "EXIT" then
-    VM.log("Warning UI server handleInfo got EXIT?!")
+    if Request[2] then
+      VM.log("Warning UI server handleInfo got EXIT from "..Request[2])
+    else
+      VM.log("Warning UI server handleInfo got EXIT?!")
+    end
   else
     VM.log("Warning UI server handleInfo got "..event)
   end

@@ -24,6 +24,7 @@ function exec(cmd,...)
   end
 end
 
+
 EVE = require 'eventListener'
 --TODO is this necessary?
 UI = require 'lib.ui_lib'
@@ -49,6 +50,7 @@ local ARQ_lab = require "arq_lab"
 local toggler = require "perphListener"
 local apps = require 'apps'
 local status_ui = require "status_ui"
+local static_ui = require "static_ui"
 local Door = require "door"
 local door_ui = require "door_ui"
 local ui_coordinator = require "ui_coordinator"
@@ -65,8 +67,9 @@ toggler.start()
 
 uiMenu:new("terminal")
 
-ui_coordinator.start("top")
-ui_coordinator.start("monitor_0")
+door_ui.start_link("top","HELL-o!")
+--ui_coordinator.start("top")
+--ui_coordinator.start("monitor_0")
 
 arqMenu.start()
 apps.start()

@@ -16,7 +16,7 @@ local function scrollHandler(Bar)
         ui.pane:drawFromLine(ui,Bar.line)
         ui:redraw()
       else
-        ui:beep()
+--        ui:beep()
       end
     elseif direction == "scroll_down" then
       local _,height = ui.term.getSize()
@@ -26,7 +26,7 @@ local function scrollHandler(Bar)
         ui.pane:drawFromLine(ui,Bar.line)
         ui:redraw()
       else
-        ui:beep()
+--        ui:beep()
       end
     end
   end

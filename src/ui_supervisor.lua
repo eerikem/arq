@@ -2,6 +2,7 @@ local gen_server = require "gen_server"
 local statusBar = require "statusBar"
 local ui_server = require "ui_server"
 local Reactor = require "lib.reactor"
+local ui_coordinator = require "ui_coordinator"
 
 local Server = {}
 
@@ -104,6 +105,9 @@ function Server.handle_cast(Request,State)
     else
       linkNewMon(name,State.uis)
     end
+  elseif event == "run_coordinator" then
+    local name = Request[2]
+    ui_coordinator.start(name)
   else
     return parse(State,unpack(Request))
   end

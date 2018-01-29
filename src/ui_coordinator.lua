@@ -18,6 +18,7 @@ local Client = {}
 
 local function securityUI(monitor,Parent)
   local ui = ui_server.newWindow(monitor,8,7)
+  ui.alwaysOnTop = true
   local title = Graphic:new(monitor)
   title:align("center")
   local body = Panel:new()
@@ -172,8 +173,12 @@ function Client.handle_cast(Request,State)
     State.radius = State.radius + 5
     updatePanel(State)
   elseif event == "ok" then
-    State.ui:ping()
-    VM.exit("normal")
+    if State.x == nil then
+      State.ui:beep()
+    else
+      State.ui:ping()
+      VM.exit("normal")
+    end
   elseif event == "stop" then
     VM.exit("normal")
   end
@@ -186,7 +191,7 @@ function Client.handle_info(Request,State)
 end
 
 function Client.start(monitor)
-  gen_server.start_link(Client,{monitor},{})    
+  gen_server.start(Client,{monitor},{})    
 end
 
 return Client

@@ -389,20 +389,6 @@ function Server.handle_cast(Request,State)
       redrawStack(State)
     elseif event == "load_coord" then
       loadCoords(State)
---TODO deprecated
---    elseif event == "play_sound" then
---      local cmd = Request[2]
---      if State.coords then
---        exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
---          cmd,
---          State.coords.x,
---          State.coords.y,
---          State.coords.z,
---          State.coords.radius
---        )
---      else
---        exec(string.format("playsound %s @p",cmd))
---      end
     elseif UI_Events[event] then
       return State.reactor:handleReq(Request,State)
     elseif State.events[Request[1]] then --TODO generic event subscriber handler
@@ -441,11 +427,6 @@ function Server.handle_info(Request,State)
     VM.log("Warning UI server handleInfo got "..event)
   end
   return State
-end
-
-function Server.playSound(Co,sound)
-  if not sound or type(sound) ~= "string" then error("badarg",2) end
-  gen_server.cast(Co,{"play_sound",sound})
 end
 
 function Server.listen(Co,event,co)

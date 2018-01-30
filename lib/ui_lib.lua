@@ -17,29 +17,14 @@ local gen_server = require 'gen_server'
 
 local UI = {}
 
---local tapSound = "/playsound frontierdevelopment:event.buttonblip @p"
---local selectSound = "/playsound frontierdevelopment:event.buttononc @p"
---local errorSound = "/playsound frontierdevelopment:event.mondecline @p"
-
-local tapSound = "frontierdevelopment:event.buttonblip"
-local selectSound = "frontierdevelopment:event.buttononc"
-local errorSound = "frontierdevelopment:event.mondecline"
-
---local tapSound = "fdi:event.montouch"
---local selectSound = "fdi:event.monaccept"
---local errorSound = "fdi:event.mondecline"
-
-
-local function playSound(ui,sound)
-  gen_server.cast(ui.server,{"play_sound",sound})
-end
+local tapSound = "fdi:event.montouch"
+local selectSound = "fdi:event.monaccept"
+local errorSound = "fdi:event.mondecline"
 
 ---
 --@function [parent=#ui] beep
 --@param #ui self
 function UI:beep()
---  exec(errorSound)
---  playSound(self,errorSound)
   self.playSound(errorSound)
 end
 
@@ -47,8 +32,6 @@ end
 --@function [parent=#ui] ping
 --@param #ui self
 function UI:ping()
---  exec(selectSound)
---  playSound(self,selectSound)
   self.playSound(selectSound)
 end
 
@@ -56,8 +39,6 @@ end
 --@function [parent=#ui] tap
 --@param #ui self
 function UI:tap()
---  exec(tapSound)
---  playSound(self,tapSound)
   self.playSound(tapSound)
 end
 
@@ -74,8 +55,7 @@ function UI:new(term)
     pane = Panel:new(),
     term = term,
     selectables={},
-    redraw = term.redraw,
-    server = VM.running()}
+    redraw = term.redraw}
   o.reactor = Reactor:new(o)
   setmetatable(o,self)
   self.__index = self

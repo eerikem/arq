@@ -145,7 +145,7 @@ end
 
 local function notify(State,event)
   for Co,_ in pairs(State.subscribers) do
-    gen_server.cast(Co,{event,VM.running()})
+    gen_server.cast(Co,{event,State.Co})
   end
 end
 
@@ -241,7 +241,7 @@ local function initCables(State)
   else
     State.openCable:disable()
     State.closeCable:disable()
---    cargoClose(State)
+    cargoClose(State)
   end
   if State.detector then
     State.detector:disable()
@@ -284,7 +284,8 @@ function Door.init(props)
     open = false,
     opening = false,
     closing = false,
-    closed=true
+    closed=true,
+    Co = VM.running()
   }
 
   for k,v in pairs(props) do

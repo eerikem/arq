@@ -57,7 +57,8 @@ end
 -- @param #string monitor
 -- @param #string title
 -- @param #string status optional secondary message
-function Status.startFancy(monitor,titleStr,status)
+-- @param #string scheme optional color scheme
+function Status.startFancy(monitor,titleStr,status,scheme)
   local ui = UI.start(monitor)
   local title = Graphic:new(titleStr)
   local body = Panel:new()
@@ -92,6 +93,7 @@ function Status.startFancy(monitor,titleStr,status)
     ui:setBackground(colors.gray)
     body:setTextColor(colors.gray)
     body:setBackgroundColor(colors.lightGray)
+    ui:update()
   end
   
   local function bright()
@@ -99,18 +101,35 @@ function Status.startFancy(monitor,titleStr,status)
     ui:setText(colors.gray)
     body:setBackgroundColor(colors.gray)
     body:setTextColor(colors.lightGray)
+    ui:update()
   end
   
-  local function someColor()
-    ui:setBackground(colors.blue)
-    ui:setText(colors.white)
-    body:setBackgroundColor(colors.lightGray)
-    body:setTextColor(colors.gray)
+  local function blue()
+    ui:setText(colors.blue)
+    ui:setBackground(colors.lightGray)
+    body:setTextColor(colors.lightBlue)
+    body:setBackgroundColor(colors.blue)
+    ui:update()
   end
---  dark()
-  bright()
+  
+  
+  
 --  VM.log(string.format("%s size: %d %d",monitor,ui.term.getSize()))
-  ui:update()  
+
+  local function setScheme(scheme)
+    if scheme ~= nil then
+      if scheme == "bright" then bright()
+      elseif scheme == "dark" then dark()
+      elseif scheme == "blue" then blue()
+      else bright() end
+    else bright()
+    end
+  end
+  
+  setScheme(scheme)
+  ui.reactor:register("scheme",scheme)
+
+  return ui.co
 end
 
 return Status

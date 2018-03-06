@@ -289,9 +289,9 @@ function Server.init(term,name)
              
   o.coords = {}
   o.playSound = function(cmd)
-    local next = next
-    if next (o.coords) ~= nil then
-      exec("playsound %s @p[x=%d,y=%d,z=%d,r=%d]",
+    local next = next --function for iterating a list
+    if next(o.coords) ~= nil then
+      exec("playsound %s @a[x=%d,y=%d,z=%d,r=%d]",
         cmd,
         o.coords[1],
         o.coords[2],

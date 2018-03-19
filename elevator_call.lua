@@ -3,19 +3,21 @@ local UI = require "lib.ui"
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 local Password = require "password"
+local ButtonPanel = require "lib.ui_button_panel"
 
 local DoorUI = {}
 
-function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
+function DoorUI.start_link(monitor,title,myLevel,elevator,Elevator,password)
   local function init(ui)
     local title = Graphic:new(title)
-    local body = Panel:new()
+    local body = ButtonPanel:new()
     local open = Graphic:new("CALL")
     local status = Graphic:new("       ")
     body.width = "max"
     open.xpos = 2
     open.ypos = 2
     ui:add(title)
+--    local buttonPanel = ButtonPanel:new()
     body:add(open)
     body:add(status)
     ui:add(body)
@@ -34,7 +36,7 @@ function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
 
     local Mod = {
       success = function ()
-        Elevator.callTo(elevator,level)
+        Elevator.callTo(elevator,myLevel)
       end,
       canceled = function (UI)
         gen_server.cast(UI,{"canceled"})
@@ -63,8 +65,10 @@ function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
             {Mod,"success",{elevator,ui.co}},
             {Mod,"canceled",{ui.co}})
         else
-          Elevator.callTo(elevator,level)
+          Elevator.callTo(elevator,myLevel)
+          body:setSelected(1)
           ui:ping()
+          ui:update()
         end
       end
     end
@@ -90,8 +94,12 @@ function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
       end
     end
     
-    local function levelHandler(event,level)
-      
+    local function levelHandler(event,arrivedAt)
+      VM.log("Calling level handler in call panel")
+      if arrivedAt == myLevel then
+        body:noneSelected()
+        ui:update()
+      end
     end
     
     if elevator then
@@ -110,6 +118,8 @@ function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
       ui:setText(colors.gray)
       body:setTextColor(colors.orange)
       body:setBackgroundColor(colors.gray)
+      body.proto.backgroundFocus = colors.gray
+      body.proto.textFocus = colors.white
       status:setTextColor(colors.red)
     end
 

@@ -52,12 +52,19 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
   local buttonPanel = ButtonPanel:new()
   
   local handler = function(button)
+    button.selected = false
     return function ()
       local lvl = buttonPanel.content[button]
-      VM.log("Button for "..lvl.." pressed!")
-      buttonPanel:setSelected(lvl)
-      ui:update()
-      Elevator.callTo(elevator,tonumber(lvl))
+--      VM.log("Button for "..lvl.." pressed!")
+      if not button.selected then
+        button.selected = true
+        buttonPanel:setSelected(lvl)
+        ui:ping()
+        ui:update()
+        Elevator.callTo(elevator,tonumber(lvl))
+      else
+        ui:tap()
+      end
     end
   end
   
@@ -72,7 +79,7 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
         return end
       erroring = true
       local lvl = buttonPanel.content[button]
-      VM.log("Button for "..lvl.." pressed!")
+--      VM.log("Button for "..lvl.." pressed!")
       ui:beep()
       buttonPanel:add(denied)
       ui:update()
@@ -130,6 +137,7 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
   local function levelHandler(event,level)
     floors:setSelected(level)
     buttonPanel:deselect(level)
+    buttonPanel.index[level].selected = false
     ui:update()
   end
   

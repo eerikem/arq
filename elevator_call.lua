@@ -55,6 +55,8 @@ function DoorUI.start_link(monitor,title,myLevel,elevator,Elevator,password)
       lastDenied = VM.spawn(flashDenied)
     end
     
+    local selected = false
+    
     local function handler(elevator)
       return function()
         if denyAccess then
@@ -66,9 +68,13 @@ function DoorUI.start_link(monitor,title,myLevel,elevator,Elevator,password)
             {Mod,"canceled",{ui.co}})
         else
           Elevator.callTo(elevator,myLevel)
-          body:setSelected(1)
-          ui:ping()
-          ui:update()
+          if not selected then
+            body:setSelected(1)
+            ui:update()
+            selected = true
+          else
+            ui:tap()
+          end
         end
       end
     end
@@ -98,6 +104,7 @@ function DoorUI.start_link(monitor,title,myLevel,elevator,Elevator,password)
       VM.log("Calling level handler in call panel")
       if arrivedAt == myLevel then
         body:noneSelected()
+        selected = false
         ui:update()
       end
     end

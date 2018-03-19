@@ -112,4 +112,10 @@ function UI.handle_cast(Request,State)
 	return State
 end
 
+function UI.handle_info(Request,State)
+  VM.log("UI got: "..unpack(Request))
+  return State
+end
+
+
 return UI

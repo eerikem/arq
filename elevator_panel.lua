@@ -123,7 +123,9 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
     ui:update()
   end
   
-  dark()   
+  dark()
+  
+  
     
   return ui,floors,buttonPanel
 end

@@ -7,12 +7,33 @@ local Door = require "door"
 
 local Status = {} 
 
-function Status.start(doorCo,monitor)
+function Status.start(doorCo,monitor,scheme)
   local ui = UI.start(monitor,20,2)
   local title = Graphic:new("Lab 102 - ARQ Dev ")
   local body = Panel:new()
   local lockdown = Graphic:new("Lockdown in effect")
   
+  local function dark()
+    ui:setText(colors.white)
+    ui:setBackground(colors.gray)
+    ui:update()
+  end
+  
+  local function blue()
+    ui:setText(colors.blue)
+    ui:setBackground(colors.lightGray)
+    body:setTextColor(colors.lightBlue)
+    body:setBackgroundColor(colors.blue)
+    ui:update()
+  end
+  
+  local function bright()
+    ui:setBackground(colors.gray)
+    body:setBackgroundColor(colors.lightGray)
+    body:setTextColor(colors.gray)
+    ui:update()
+  end
+    
   ui.setTextScale(2)
   if ui.native.getSize() < string.len(lockdown.text) then
     ui.setTextScale(1)
@@ -39,9 +60,7 @@ function Status.start(doorCo,monitor)
       body:setTextColor(colors.white)
       ui:update()
     end
-    
-    bright()
-    
+        
     local function openedHandler()
       if ui.pane:contains(lockdown) then
         ui.pane:remove(lockdown)
@@ -56,12 +75,13 @@ function Status.start(doorCo,monitor)
       end
     end
     
-    
-    
     ui.reactor:register("opened",openedHandler)
     ui.reactor:register("closed",closedHandler)
     ui.reactor:register("triggered",alarm)
     ui.reactor:register("reset",bright)
+    ui.reactor:register("bright",bright)
+    ui.reactor:register("dark",dark)
+    ui.reactor:register("blue",blue)
     
   else
     
@@ -76,15 +96,7 @@ function Status.start(doorCo,monitor)
     
     lockdown:setTextColor(colors.red)
 --    lockdown:setTextColor(colors.lightGray)
-    
-    local function dark()
-      ui:setText(colors.white)
-      ui:setBackground(colors.gray)
-      ui:update()
-    end
-      
-    dark()
-    
+         
     local function openedHandler()
       if body:contains(lockdown) then
         body:remove(lockdown)
@@ -101,8 +113,23 @@ function Status.start(doorCo,monitor)
     
     ui.reactor:register("opened",openedHandler)
     ui.reactor:register("closed",closedHandler)
+    ui.reactor:register("bright",bright)
+    ui.reactor:register("dark",dark)
+    ui.reactor:register("blue",blue)
     
   end
+  
+  local function setScheme(scheme)
+    if scheme ~= nil then
+      if scheme == "bright" then bright()
+      elseif scheme == "dark" then dark()
+      elseif scheme == "blue" then blue()
+      else bright() end  
+    end
+  end
+  
+  setScheme(scheme)
+  ui.reactor:register("scheme",scheme)
   
   Door.subscribe(doorCo,ui.co)
   

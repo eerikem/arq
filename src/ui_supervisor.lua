@@ -146,8 +146,8 @@ function Server.terminate(Reason,State)
   end
 end
 
-function Server.statusWindow(Co)
-  local bar = statusBar:new(Co,4)
+function Server.statusWindow(Co,height)
+  local bar = statusBar:new(Co,height or 4)
   return function(str)
     bar:write(str)
   end

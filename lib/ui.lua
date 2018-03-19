@@ -103,7 +103,7 @@ function UI.handle_cast(Request,State)
   elseif event == "register" then
     State.ui.reactor:register(Request[2],Request[3])
   else
-    if State.ui.reactor:handling(Request[1]) then
+    if State.ui.reactor:handling(event) then
       State.ui.reactor:handleEvent(unpack(Request))
     else
       VM.log("UI module handle_cast received unkown: "..event)

@@ -61,7 +61,7 @@ VM.init()
 CONFIG = config.load()
 
 supervisor.start_link(arqSup,{},"arq_sup")
-VM.log = ui_sup.statusWindow("terminal")
+VM.log = ui_sup.statusWindow("terminal",6)
 
 toggler.start()
 

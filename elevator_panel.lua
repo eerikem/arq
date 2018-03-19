@@ -10,13 +10,15 @@ local ui_server = require "ui_server"
 local DoorUI = {}
 
 function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
+  
+  local function init(ui)
   local ui = ui_server.newWindow(monitor,7,5)
   
   local floors = Radio:new()
   local lvl1 = Graphic:new("1")
   local lvl2 = Graphic:new("2")
   local lvl3 = Graphic:new("3")
-  
+  local activeFloor = floor
   lvl2.xpos = 3
   lvl3.xpos = 5
   
@@ -24,7 +26,7 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
   floors:add(lvl1)
   floors:add(lvl2)
   floors:add(lvl3)
-  floors:setSelected(floor)
+  floors:setSelected(activeFloor)
   floors.align= "center"--TODO implement this
   floors.xpos = 2
   floors.proto.textFocus = colors.green
@@ -55,7 +57,7 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
       VM.log("Button for "..lvl.." pressed!")
       buttonPanel:setSelected(lvl)
       ui:update()
-      Elevator.callTo(elevator,lvl)
+      Elevator.callTo(elevator,tonumber(lvl))
     end
   end
   
@@ -125,9 +127,21 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
   
   dark()
   
+  local function levelHandler(event,level)
+    floors:setSelected(level)
+    buttonPanel:deselect(level)
+    ui:update()
+  end
   
+  UI.register(VM.running(),"level",levelHandler)
+  if elevator then
+    Elevator.subscribe(elevator)
+  end
     
-  return ui,floors,buttonPanel
+  
+  end
+    
+  return UI.start(monitor,7,5,init)
 end
 
 return DoorUI

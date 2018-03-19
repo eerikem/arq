@@ -42,7 +42,7 @@ end
 
 function Buttons:deselect(index)
   if not index then
-    error("deSelecte requires a numeric index",2) end
+    error("deselect requires a numeric index",2) end
   if index < 1 or index > #self.index then
     error("bad index "..index,2) end
   self.selected[self.index[index]]=nil

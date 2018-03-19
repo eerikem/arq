@@ -90,12 +90,17 @@ function DoorUI.start_link(monitor,title,level,elevator,Elevator,password)
       end
     end
     
+    local function levelHandler(event,level)
+      
+    end
+    
     if elevator then
       open:setOnSelect(ui,handler(elevator))
       ui.reactor:register("deny",denyHandler)
       ui.reactor:register("canceled",cancelHandler)
       ui.reactor:register("denyAccess",accessHandler)
       ui.reactor:register("allowAccess",accessHandler)
+      ui.reactor:register("level",levelHandler)
     else
       open:setOnSelect(ui,denyAll)
     end

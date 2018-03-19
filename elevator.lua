@@ -20,7 +20,14 @@ local Elevator = {}
 --door=doorCo,
 --call=monitor,
 --panel=monitor,
+--calback=function,
 --}}
+
+function Elevator.subscribe(elevator,co)
+  if not elevator then error("badarg",2) end
+  local co = co or VM.running()
+  gen_server.cast(elevator,{"subscribe",co})
+end
 
 function Elevator.newCall(monitor,title,number,elevator,password)
   return elvator_call.start_link(monitor,title,number,elevator,Elevator,password)
@@ -31,11 +38,8 @@ function Elevator.newPanel(monitor,floor,elevator)
 end
 
 function Elevator.new(levels)
-  return Elevator.start_link(levels)
-end
-
-function Elevator.subscribe(Co)
-
+  local ok, Co = Elevator.start_link(levels)
+  return Co
 end
 
 function Elevator.callTo(Co,lvl)
@@ -43,7 +47,7 @@ function Elevator.callTo(Co,lvl)
 end
 
 function Elevator.start_link(levels)
-  gen_server.start_link(Elevator,{levels},{})
+  return gen_server.start_link(Elevator,{levels},{})
 end
 
 function Elevator.init(levels)
@@ -64,13 +68,24 @@ function Elevator.init(levels)
     destQueue = {},
     direction = nil,
     delay = 3,
+    subscribers = {},
     levels = byLevel,
     }
 end
 
-local function openDoor(State,level)
-  if State.levels[level] then
-    Door.open(State.levels[level].door)
+local function openDoor(State)
+  if State.levels[State.activeLevel] then
+    if State.levels[State.activeLevel].door ~= nil then
+      Door.open(State.levels[State.activeLevel].door)
+    end
+  end
+end
+
+local function closeDoor(State)
+  if State.levels[State.activeLevel] then
+    if State.levels[State.activeLevel].door ~= nil then
+      Door.close(State.levels[State.activeLevel].door)
+    end
   end
 end
 
@@ -82,13 +97,19 @@ local function setDir(State,level)
   end
 end
 
+local function notify(State,event,...)
+  for Co,_ in pairs(State.subscribers) do
+    gen_server.cast(Co,{event,unpack(arg)})
+  end
+end
+
 function Elevator.handle_cast(Request,State)
   local event = Request[1]
   if event == "call" then
     local level = Request[2]
-    VM.log("Received call from level "..level)
+    VM.log("Received call from level "..level.." at lvl ".. State.activeLevel)
     if State.activeLevel == level then
-      openDoor(State,level)
+      openDoor(State)
     else
       if State.levels[level] == nil then
         VM.log("Not a valid destination: level "..level)
@@ -96,15 +117,17 @@ function Elevator.handle_cast(Request,State)
       if not State.levels[level].waiting then
         local lvl = State.levels[level]
         lvl.waiting = true
-        Door.close(lvl.door)
+        closeDoor(State)
         if not State.direction then
           setDir(State,level)
           EVE.tick(State.delay)
-        else
-          table.insert(State.destQueue,level)
         end
+        table.insert(State.destQueue,level)
       end
     end
+  elseif event == "subscribe" then
+    local _,Co = unpack(Request)
+    State.subscribers[Co]=true
   elseif event == "openDoor" then
     local level = Request[2]
   elseif event == "closeDoor" then
@@ -117,8 +140,31 @@ function Elevator.handle_cast(Request,State)
 end
 
 function Elevator.handle_info(Request,State)
+  local event = Request[1]
   if event == "wake" then
     VM.log("Received wake signal")
+    if State.direction == "up" then
+      State.activeLevel = State.activeLevel + 1 
+    elseif State.direction == "down" then
+      State.activeLevel = State.activeLevel - 1
+    else
+      error("Elevator received unexpected wake signal")
+    end
+    notify(State,"level",State.activeLevel)
+--    VM.log("Elevator at "..State.activeLevel)
+--    VM.log("Going to "..State.destQueue[1])
+    if State.activeLevel ~= State.destQueue[1] then
+      EVE.tick(State.delay)
+    else
+      table.remove(State.destQueue,1)
+      State.direction = nil
+      local lvl = State.levels[State.activeLevel]
+      if lvl.callback ~= nil then
+        lvl.callback()
+      end
+      openDoor(State)
+      lvl.waiting = false
+    end
   else
     VM.log("Elevator got: "..unpack(Request))
   end

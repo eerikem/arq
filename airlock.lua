@@ -4,18 +4,11 @@ local Bundle = require "lib.bundle"
 local Graphic = require "lib.graphic"
 local Panel = require "lib.ui_obj"
 
-local CABLE_SIDE = "back"
 local DELAY = 7
 local DOOR_DELAY = 3
-local MIDDLE = "monitor_76"
-local doors = {
-  outer = Bundle:new(CABLE_SIDE,colors.magenta,"monitor_74"),
-  inner = Bundle:new(CABLE_SIDE,colors.white,"monitor_75")
-  }
 local LEFT = "inner"
 local RIGHT = "outer"
-local x,y,z = -60,72,126
-local SOUND = "/playsound fdi:event.airlock_large @a[%d,%d,%d,3]"
+local SOUND = "fdi:event.airlock_large"
 
 local function initDoors(doors)
 --  VM.log("Running initDoors")
@@ -62,7 +55,8 @@ local function doorTimer(callback)
   end
 end
 
-local function open(door)
+local function open(State,door)
+  local doors = State.doors
   doors[door]:enable()
   doors[door].opening = true
   local fun = function()
@@ -77,7 +71,8 @@ local function open(door)
   end
 end
 
-local function close(door,from,ref)
+local function close(State,door,from,ref)
+  local doors = State.doors
   doors[door]:disable()
   doors[door].closing = true
   local fun = function(canceled)
@@ -125,9 +120,8 @@ function Airlock.cycle(Co)
   return gen_server.call(Co,{"cycle"})
 end
 
-function Airlock.start()
-  local ok, Co = Airlock.start_link()
-  VM.register("airlock",Co)
+function Airlock.start(props)
+  local ok, Co = Airlock.start_link(props)
   return Co
 end
 
@@ -139,8 +133,8 @@ end
 --Server & UI--
 ---------------
 
-function Airlock.start_link()
-  return gen_server.start_link(Airlock,{},{})
+function Airlock.start_link(...)
+  return gen_server.start_link(Airlock,{unpack(arg)},{})
 end
 
 local function getDirection(door)
@@ -441,15 +435,16 @@ function Airlock.testUI(Co)
   return outerUI(Co), innerUI(Co)
 end
 
-function Airlock.init()
-  initDoors(doors)
+function Airlock.init(props)
+  --TODO add props to STATE
+  initDoors(props.doors)
   local uis = {}
   local last = "inner"
-  for name,door in pairs(doors) do
+  for name,door in pairs(props.doors) do
     uis[name] = outerUI(door.name,name)
   end
-  local inner = innerUI(MIDDLE)
-  local State = {doors = doors,cycling = false,uis = uis,inner = inner,last = last}
+  local inner = innerUI(props.middle)
+  local State = {doors = props.doors,cycling = false,uis = uis,inner = inner,last = last}
   return true, State
 end
 
@@ -467,7 +462,7 @@ local function cycle(State,door,other)
       State.uis[other].reactor:handleEvent("close","queue_cycle")
     end
     local ref = VM.ref()
-    close(other,VM.running(),ref)
+    close(State,other,VM.running(),ref)
     State.inner.reactor:handleEvent("closing")
     State.cycleQueued = ref
     return
@@ -476,12 +471,12 @@ local function cycle(State,door,other)
   State.inner.reactor:handleEvent("cycle",door)
   --TODO Remove calling door to cycle? What happens if double button tap?
   State.uis[door].reactor:handleEvent("cycle",door)
-  exec(SOUND,x,y,z)
+  State.inner.playSound(SOUND)
   EVE.sleep(DELAY)
   State.inner.reactor:handleEvent("stop_cycle")
   State.uis[other].reactor:handleEvent("close")
   State.uis[door].reactor:handleEvent("open")
-  open(door)
+  open(State,door)
   State.last = door
 end
 
@@ -506,7 +501,7 @@ function Airlock.handle_call(Request,From,State)
         --cycle the airlock!
         cycle(State,door,other)
       else
-        open(door)
+        open(State,door)
         State.last = door
         gen_server.reply(From,"opening")
       end
@@ -515,7 +510,7 @@ function Airlock.handle_call(Request,From,State)
     local door = Request[2]
     local d = State.doors[door]
     if d:isOut() then
-        close(door,VM.running())
+        close(State,door,VM.running())
         gen_server.reply(From,"closing")
     elseif d.closing then
       gen_server.reply(From,"closing")
@@ -535,7 +530,7 @@ function Airlock.handle_call(Request,From,State)
     end
   elseif event == "abort" then
     gen_server.reply(From,"opening")
-    open(State.last)
+    open(State,State.last)
   end
   return State
 end

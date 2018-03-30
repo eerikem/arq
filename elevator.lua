@@ -70,7 +70,7 @@ function Elevator.init(levels)
     activeLevel = activeLevel,
     destQueue = {},
     direction = nil,
-    delay = 3,
+    delay = 4.5,
     subscribers = {},
     levels = byLevel,
     }
@@ -112,6 +112,7 @@ local function sendLift(State)
       local level = State.destQueue[1]
       setDir(State,level)
       EVE.tick(State.delay)
+      notify(State,"playsound","fdi:event.part1.elevator")
     end
   end
 end
@@ -131,12 +132,9 @@ function Elevator.handle_cast(Request,State)
       if not State.levels[level].waiting then
         local lvl = State.levels[level]
         lvl.waiting = true
-        closeDoor(State)
-        if not State.direction then
-          setDir(State,level)
-          EVE.tick(State.delay)
-        end
         table.insert(State.destQueue,level)
+        closeDoor(State)
+        sendLift(State)
       end
     end
   elseif event == "closed" then

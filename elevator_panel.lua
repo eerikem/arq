@@ -145,7 +145,10 @@ function DoorUI.start_link(monitor,floor,elevator,Elevator,password)
   if elevator then
     Elevator.subscribe(elevator)
   end
-    
+  
+  UI.register(VM.running(),"playsound",function(_,sound)
+    ui.playSound(sound)
+  end)
   
   end
     

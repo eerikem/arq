@@ -39,14 +39,10 @@ local arqSup = require 'arq_sup'
 local ui_sup = require 'ui_supervisor'
 local arqMenu = require 'arqMenu'
 local uiMenu = require 'ui_sup_menu'
-local Attack = require "attack"
 local Elevator = require "elevator"
-local Teleport = require "teleport"
 local Airlock = require "airlock"
 local Observer = require "observer"
-local Manager = require "door_manager"
 local Password = require "password"
-local ARQ_lab = require "arq_lab"
 local toggler = require "perphListener"
 local apps = require 'apps'
 local status_ui = require "status_ui"
@@ -60,6 +56,8 @@ VM.init()
 
 CONFIG = config.load()
 
+EVE.sleep(0.1)
+
 supervisor.start_link(arqSup,{},"arq_sup")
 VM.log = ui_sup.statusWindow("terminal",6)
 
@@ -68,6 +66,9 @@ toggler.start()
 uiMenu:new("terminal")
 
 arqMenu.start()
+
+EVE.sleep(0.1)
+
 apps.start()
 
 EVE.run()

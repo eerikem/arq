@@ -1,3 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <buildpath>
+	<buildpathentry excluding="src/|templates/|test/" kind="src" path=""/>
+	<buildpathentry kind="src" path="src"/>
+	<buildpathentry combineaccessrules="false" kind="prj" path="/server"/>
 </buildpath>

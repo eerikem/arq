@@ -8,22 +8,22 @@ colors.minus = function(colors,color)
   end
 end
 
---Global for backwords compatibility
+---Global for backwords compatibility
+-- @module Bundle
 BUNDLE = {}
 
-function BUNDLE:new(o)
-  --print "hello"
-  local o = o or {}
-  setmetatable(o, self)
-  self.__index = self
-  return o
-end
-
-function BUNDLE:new(_side,_cable,_name)
+---
+-- @param self
+-- @param #string CABLE_SIDE The side which the cable is connected
+-- @param #string color
+-- @param #string name An optional name for the Bundle
+-- @return #Bundle
+function BUNDLE:new(CABLE_SIDE,color,name)
+  
   local o = {
-    side=_side,
-    cable=_cable,
-    name=_name,
+    side=CABLE_SIDE,
+    cable=color,
+    name=name,
     flickering = false
   }
   setmetatable(o, self)

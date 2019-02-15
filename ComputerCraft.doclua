@@ -1,0 +1,14 @@
+-------------------------------------------------------------------------------
+-- @module ComputerCraft
+
+---
+-- Global objects
+-- @field [parent=#global] #color color
+
+---
+-- @type color
+-- @field #string white
+-- @field #string black
+
+
+return nil

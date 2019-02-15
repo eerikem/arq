@@ -9,8 +9,6 @@ local Graphic = require 'lib.graphic'
 
 --- Server for managing terminal events and ui's
 -- @module ui.server
--- @return src.ui_server#ui.server
-
 local Server = {}
 
 local errorSound = "/playsound frontierdevelopment:event.mondecline @p"

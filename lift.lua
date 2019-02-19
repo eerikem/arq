@@ -18,8 +18,8 @@ local Lift = {}
 
 ---
 -- @function [parent=#lift] new
--- @param lib.bundle#lib.bundle cable that controls the door
--- @param lib.bundle#lib.bundle cable that controls the door
+-- @param lib.bundle#Bundle cable that controls the door
+-- @param lib.bundle#Bundle cable that controls the door
 -- @param #number time time of lift
 -- @return #thread
 function Lift.new(cableUp,cableDown,time)

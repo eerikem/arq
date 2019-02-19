@@ -8,7 +8,7 @@ local doorUI = require "door_ui"
 
 ---
 -- @module door
-
+-- A module for doors of all types!
 local Door = {}
 
 ----------------
@@ -17,9 +17,9 @@ local Door = {}
 
 ---
 -- @function [parent=#door] new
--- @param lib.bundle#lib.bundle cable that controls the door
+-- @param lib.bundle#Bundle cable that controls the door
 -- @param #number time optional delay before the door auto closes
--- @param lib.bundle#lib.bundle detector Optional detector cable
+-- @param lib.bundle#Bundle detector Optional detector cable
 -- @return #thread
 function Door.new(cable,time,detector)
   if not cable then error("Door must have a cable",2) end
@@ -35,10 +35,10 @@ end
 
 ---
 -- @function [parent=#door] newCargo
--- @param lib.bundle#lib.bundle open opens bay door
--- @param lib.bundle#lib.bundle close closes bay door
+-- @param lib.bundle#Bundle open opens bay door
+-- @param lib.bundle#Bundle close closes bay door
 -- @param #number time how long to open/close door
--- @param lib.bundle#lib.bundle detector Optional detector cable
+-- @param lib.bundle#Bundle detector Optional detector cable
 -- @return #thread
 function Door.newCargo(open,close,time,detector)
   if not (open and close) then error("Badarg: cables missing",2) end
@@ -67,54 +67,81 @@ function Door.newUI(monitor,title,door,password)
   return doorUI.start_link(monitor,title,door,Door,password)
 end
 
+---
+-- @param #thread door
 function Door.open(door)
   return gen_server.call(door,{"open"})
 end
 
+---
+-- Open the door whether locked or unlocked
+-- @param #thread door
 function Door.forceOpen(door)
   return gen_server.call(door,{"open",true})
 end
 
+---
+-- @param #thread door
 function Door.forceClose(door)
   return gen_server.call(door,{"close",true})
 end
 
+---
+-- @param #thread door
 function Door.close(door)
   return gen_server.call(door,{"close"})
 end
 
+---
+-- @param #thread door
 function Door.lock(door)
   gen_server.cast(door,{"lock"})
 end
 
+---
+-- @param #thread door
 function Door.unlock(door)
   gen_server.cast(door,{"unlock"})
 end
 
+---
+-- @param #thread door
 function Door.getTitle(door)
   return gen_server.call(door,{"get","title"})
 end
 
+---
+-- @param #thread door
 function Door.getType(door)
   return gen_server.call(door,{"get","type"})
 end
 
+---
+-- @param #thread door
 function Door.getState(door)
   local locked = gen_server.call(door,{"get","locked"})
   local open = gen_server.call(door,{"get","open"})
   return open,locked
 end
 
+---
+-- Instruct a door to subscribe to another coroutine
+-- @param #thread door The door that will subscribe
+-- @param #thread co Optional. If omitted the door will subscribe to the running coroutine.
 function Door.subscribe(door,co)
   if not door then error("badarg",2) end
   local co = co or VM.running()
   gen_server.cast(door,{"subscribe",co})
 end
 
+---
+-- @param #thread doorUI
 function Door.denyAccess(doorUI)
   gen_server.cast(doorUI,{"denyAccess"})
 end
 
+---
+-- @param #thread doorUI
 function Door.allowAccess(doorUI)
   gen_server.cast(doorUI,{"allowAccess"})
 end

@@ -59,20 +59,11 @@ function BUNDLE:pulse()
 end
 
 function BUNDLE:flick(low, high,low2,high2)
-  --local ui = UI:aquireAnyMonitor()
-  --ui.clear()
   while self.flickering do
-  -- term.redirect(ui)
-  -- print("enable")
-  --  term.redirect(term.native())
     self:enable()
     local x = math.random(low,high)
     waitSeconds(x+low2)
- --  term.redirect(ui)
- --   print("disable")
- --  term.redirect(term.native())
     self:disable()
-    --local y = low + high * (1 - (high-low)/(x-low)
     waitSeconds(high2-x)
   end
 end

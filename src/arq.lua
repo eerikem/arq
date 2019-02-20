@@ -14,8 +14,17 @@ end
 
 sleep = function() error("Use EVE.sleep within ARQ",2) end
 
+
+--- The virtual machine running the ARQ.
+-- Handles threads, event messaging and error propagation.
+-- Generally you will only use for logging messages eg: VM.log("my msg")
 VM = require 'vm'
 
+---
+-- Execute a server command.
+-- A leading slash is expected.
+-- string is formatted so additional arguments will be programmatically inserted. 
+-- @param #string cmd eg: "/kill @a %d %d %d"
 function exec(cmd,...)
   if commands then
     commands.execAsync(string.format(cmd,unpack(arg)))
@@ -24,10 +33,10 @@ function exec(cmd,...)
   end
 end
 
-
+---
+-- Event Listener for the ARQ.
+-- Manages events to and from the ComputerCraft OS.
 EVE = require 'eventListener'
---TODO is this necessary?
-UI = require 'lib.ui_lib'
 
 -----------
 --Run ARQ--
@@ -58,6 +67,8 @@ local config = require "config"
 
 VM.init()
 
+--- The values stored in the ARQ configuration file.
+-- This global is used for reading metadata stored from previous ARQ instances. See config.lua module for interface.
 CONFIG = config.load()
 
 supervisor.start_link(arqSup,{},"arq_sup")

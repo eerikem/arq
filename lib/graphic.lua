@@ -64,6 +64,44 @@ function Graphic:getSize(width)
   return absWidth, absHeight
 end
 
+local function lineWrap(sText,w,line,room)
+  local line = line or ""
+  local room = room or w
+  local whitespace = string.match( sText, "^[ \t]+" )
+  local x = 1
+  if whitespace then
+    -- Print whitespace
+    if string.len(whitespace) > room then
+      line = line .. string.sub(whitespace,1,room)
+      return line,string.sub(sText,room + 1)
+    else
+      x = string.len(whitespace) + 1
+      line = line..whitespace
+      sText = string.sub( sText, x )
+    end
+  end
+  local newline = string.match( sText, "^\n" )
+  if newline then
+    return line .. "\n", string.sub( sText, 2 )
+  end
+  
+  local text = string.match( sText, "^[^ \t\n]+" )
+  if text then
+    if string.len(text) > w then
+      -- Print a multiline word      
+        return line .. string.sub(text,1,room),string.sub( sText, room + 1 )
+    else
+      -- Print a word normally
+      if string.len(line) + string.len(text) > w then
+        return line, sText
+      end
+    sText = string.sub( sText, string.len(text) + 1 )
+    return UI.lineWrap(sText,w,line .. text,room - string.len(text))
+    end
+  end
+  return line
+end
+
 function Graphic:getTextFromLine(line,width)
   if not line or not width or line < 1 then error("badargs",2) end
   local yIndent = self.ypos - 1
@@ -72,7 +110,7 @@ function Graphic:getTextFromLine(line,width)
   local length = string.len(self.text)
   width = width - xIndent
   if width * (line - 1) < length then
-    local _,result = UI.lineWrap(self.text,width*(line - 1) + 1)
+    local _,result = lineWrap(self.text,width*(line - 1) + 1)
     return result
   else
     return nil

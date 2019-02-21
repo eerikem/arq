@@ -69,6 +69,7 @@ uiMenu:new("terminal")
 
 arqMenu.start()
 EVE.sleep(0.1)
+
 apps.start()
 
 EVE.run()

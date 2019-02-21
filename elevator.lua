@@ -62,12 +62,15 @@ function Elevator.init(levels)
     if l.call ~= nil then
       Elevator.newCall(l.call,l.name,l.level,VM.running(),l.password)
     end
+    if l.door ~= nil then
+      Door.subscribe(l.door)
+    end
   end
   return true, {
     activeLevel = activeLevel,
     destQueue = {},
     direction = nil,
-    delay = 3,
+    delay = 4.5,
     subscribers = {},
     levels = byLevel,
     }
@@ -103,13 +106,25 @@ local function notify(State,event,...)
   end
 end
 
+local function sendLift(State)
+  if not State.direction then
+    if State.destQueue[1] then
+      local level = State.destQueue[1]
+      setDir(State,level)
+      EVE.tick(State.delay)
+      notify(State,"playsound","fdi:event.part1.elevator")
+    end
+  end
+end
+
 function Elevator.handle_cast(Request,State)
   local event = Request[1]
   if event == "call" then
     local level = Request[2]
     VM.log("Received call from level "..level.." at lvl ".. State.activeLevel)
-    if State.activeLevel == level then
+    if State.activeLevel == level and not State.direction then
       openDoor(State)
+      notify(State,"level",State.activeLevel)
     else
       if State.levels[level] == nil then
         VM.log("Not a valid destination: level "..level)
@@ -117,13 +132,16 @@ function Elevator.handle_cast(Request,State)
       if not State.levels[level].waiting then
         local lvl = State.levels[level]
         lvl.waiting = true
-        closeDoor(State)
-        if not State.direction then
-          setDir(State,level)
-          EVE.tick(State.delay)
-        end
         table.insert(State.destQueue,level)
+        closeDoor(State)
+        sendLift(State)
       end
+    end
+  elseif event == "closed" then
+    local door = Request[2]
+    local lvl = State.levels[State.activeLevel]
+    if lvl.door == door then
+      sendLift(State)
     end
   elseif event == "subscribe" then
     local _,Co = unpack(Request)
@@ -162,8 +180,12 @@ function Elevator.handle_info(Request,State)
       if lvl.callback ~= nil then
         lvl.callback()
       end
-      openDoor(State)
       lvl.waiting = false
+      if lvl.door then
+        openDoor(State)
+      else
+        sendLift(State)
+      end
     end
   else
     VM.log("Elevator got: "..unpack(Request))

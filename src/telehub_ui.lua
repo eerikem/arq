@@ -1,7 +1,6 @@
 local Teleporter = require "telehub"
 local UI = require "lib.ui"
 local Graphic = require "lib.graphic"
-local Menu = require 'lib.ui_menu'
 local Panel = require "lib.ui_obj"
 
 
@@ -49,10 +48,10 @@ local function initTeleUI(ui)
     local title = Graphic:new(destination)
     local body = Panel:new()
     local ready = Graphic:new(" READY TRANSIT")
-    local prime = Graphic:new("PRIMED!       ")
-    local teleport = Graphic:new("transit      ")
-    local success = Graphic:new("success       ")
-    local denied = Graphic:new("Denied!      ")
+    local prime = Graphic:new("PRIMED!")
+    local teleport = Graphic:new("transit")
+    local success = Graphic:new("success")
+    local denied = Graphic:new("ACCESS ")
     local cycler = Graphic:new("       ")
     body.width = "max"
     ready.ypos = 2
@@ -65,9 +64,9 @@ local function initTeleUI(ui)
 --    cycler:setTextColor(colors.gray)
     ui:add(title)
     body:add(ready)
---    body:add(cycler)
+    body:add(cycler)
     ui:add(body)
-    ui:add(cycler)
+--    ui:add(cycler)
     prime.reactor:stop()
     teleport.reactor:stop()
     success.reactor:stop()
@@ -84,22 +83,48 @@ local function initTeleUI(ui)
       return button1
     end
     
+    local lastDeny
+    local prevButton
     local function deny()
       ui:beep()
-      local prevButton = enable(denied)
-      ui:update()
-      EVE.sleep(1)
-      enable(prevButton)
+      if not lastDeny then
+        cycler.text=" DENIED "
+        cycler:setTextColor(colors.red)
+        prevButton = enable(denied)
+      end
+      lastDeny = EVE.queue("telehub_deny",1)
     end
     
-    ready:setOnSelect(ui,function()
-      ui:ping()
-      Teleporter.queueTransit(teleporter)
+    ui.reactor:register("telehub_deny",function(_,ref)
+      if lastDeny == ref then
+        cycler.text="       "
+        enable(prevButton)
+        prevButton = nil
+        lastDeny = nil
+      else
+        VM.log("lastDeny and ref doesn't match")
+      end
     end)
     
-    body:setOnSelect(ui,function()ui:beep() end)
-    body.reactor:stop()
     
+    if teleporter then
+      ready:setOnSelect(ui,function()
+        ui:ping()
+        Teleporter.queueTransit(teleporter)
+      end)
+    
+      body:setTextColor(colors.orange)
+      body:setOnSelect(ui,function()ui:beep() end)
+      body.reactor:stop()
+    else
+      ready.reactor:stop()
+      body:setTextColor(colors.lightGray)
+      body:setHeight(4)
+      body:setOnSelect(ui,function()
+        deny()
+      end)
+    end
+        
     
     ui.reactor:register("deny",function()
     
@@ -122,30 +147,42 @@ local function initTeleUI(ui)
     local index = 1
     
     ui.reactor:register("teleporting",function()
+      body:setTextColor(colors.lightGray)
       enable(teleport)
       cycler.text = "*      "
-      EVE.queue("animate",6/5)
+      cycler:setTextColor(nil)
+      EVE.queue("animate_ready",3)
       ui:update()
+    end)
+    
+    ui.reactor:register("animate_ready",function()
+      cycler:setTextColor(colors.red)
+      ui:update()
+      EVE.queue("animate",2)
     end)
     
     ui.reactor:register("animate",function()
+      cycler:setTextColor(colors.white)
       cycler.text = anim[index]
-      ui:update()
       index = index + 1
-      if index < 5 then
-        EVE.queue("animate",6/5)
+      if index <= 6 then
+        EVE.queue("animate",4/6)
       else
+        cycler.text = "      *"
         index = 1
       end
+      ui:update()
     end)
     
     ui.reactor:register("teleported",function()
+      body:setTextColor(colors.green)
       enable(success)
-      cycler.text = "      *"
+      cycler:setTextColor(colors.green)
       ui:update()
       end)
       
     ui.reactor:register("telehub_ready",function()
+      body:setTextColor(colors.orange)
       enable(ready)
       cycler.text = "       "
       body.reactor:stop()
@@ -155,7 +192,6 @@ local function initTeleUI(ui)
     local function bright()
       ui:setBackground(colors.lightGray)
       ui:setText(colors.gray)
-      body:setTextColor(colors.orange)
       body:setBackgroundColor(colors.gray)
       denied:setTextColor(colors.red)
       prime:setTextColor(colors.red)
@@ -163,7 +199,7 @@ local function initTeleUI(ui)
 
     bright()
     ui:update()
-    if teleport then
+    if teleporter then
       Teleporter.subscribe(teleporter)
     end
 end

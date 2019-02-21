@@ -5,25 +5,10 @@ local Panel = require "lib.ui_obj"
 local Door = require 'door'
 local static_ui = require "static_ui"
 
-
-local function teleArriveSound()
-  local x,y,z = 21,45,0
-  local telesound = "/playsound fdi:event.teleport_general_arrive @a[%d,%d,%d,20]"
-  exec(telesound,x,y,z)
-end
-
-local function teleLeaveSound()
-local x,y,z = 21,45,0
-  local telesound = "/playsound fdi:event.teleport_general @a[%d,%d,%d,20]"
-  exec(telesound,x,y,z)
-end
-
-
 ---
 -- @type App_Server
 -- @extends gen_server#server
 local App_Server = {}
-
 
 ----------------
 --External API--
@@ -34,10 +19,14 @@ local App_Server = {}
 local Teleporter = {}
 
 ---
--- @param #function callback The function to execute when teleport is called
+-- @param #function startTele The function to execute at the start of teleport
+-- @param #function callback The function to execute the moment of teleportation
+-- @param #number timeToTeleport The time to wait between executing startTeleporter and callback
+-- @param #number timeToComplete The time to wait before signalling teleport process is complete
 -- @param #thread door optional door of teleport bay
 -- @param #Bundle detector optional detector cable
 -- @param #Bundle light optional
+-- @param #string emitter optional
 function Teleporter.start(...)
   local ok, co = gen_server.start_link(App_Server,{...})
   assert(ok,"The teleporter failed to start")
@@ -72,15 +61,22 @@ end
 -- Should implement the four gen_server functions
 
 ---
+-- @param #function startTele
 -- @param #function callback
+-- @param #number timeToTeleport
+-- @param #number timeToComplete
 -- @param #thread door
 -- @param lib.bundle#Bundle detector
 -- @param lib.bundle#Bundle light
-function App_Server.init(callback,door,detector,light)
+-- @param #emitter emitter
+function App_Server.init(startTele,callback,timeToTeleport,timeToComplete,door,detector,light,emitter)
   ---
   --@type State
   local State = {
+    startTele = startTele,
     callback = callback,
+    timeToTeleport = timeToTeleport,
+    timeToComplete = timeToComplete,
     door = door,
     ready = true,
     teleporting=false,
@@ -88,7 +84,13 @@ function App_Server.init(callback,door,detector,light)
     subscribers = {},
     detector = detector,
     light = light,
+    emitter = emitter,
   }
+  
+  if State.emitter then
+    emitter.setParticleType("fireworksSpark")
+    emitter.setEmitting(false)
+  end
   
   EVE.subscribe("redstone")
   
@@ -116,6 +118,10 @@ function App_Server.handle_cast(Request,State)
       Door.forceOpen(State.door)
       State.light:enable()
       notify(State,"primed")
+      if State.emitter then
+        State.emitter.setRate(0.1)
+        State.emitter.setEmitting(true)
+      end
     end
   elseif event == "redstone" then
     if State.detector:isOn() and State.primed then
@@ -123,15 +129,18 @@ function App_Server.handle_cast(Request,State)
       State.teleporting = true
       notify(State,"teleporting")
       Door.forceClose(State.door)
-      teleLeaveSound()
-      EVE.queue("teleport",8)
-      EVE.queue("teleport_complete",10)
+      State.startTele()
+      EVE.queue("teleport",State.timeToTeleport)
+      EVE.queue("teleport_complete",State.timeToComplete)
     elseif not State.detector:isOn() and State.ready then
       Door.forceClose(State.door)
     end
   elseif event == "teleport" then
     if State.teleporting then
       State.callback()
+      if State.emitter then
+        State.emitter.setRate(2)
+      end
     end
   elseif event == "teleport_complete" then
     if State.teleporting then
@@ -141,6 +150,10 @@ function App_Server.handle_cast(Request,State)
       State.light:disable()
       if State.detector:isOn() then
         Door.forceOpen(State.door)
+      end
+      if State.emitter then
+        State.emitter.setRate(1)
+        State.emitter.setEmitting(false)
       end
       EVE.queue("reset_telehub",4)
     end

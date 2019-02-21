@@ -3,12 +3,25 @@
 
 ---
 -- Global objects
--- @field [parent=#global] #color color
+-- @field [parent=#global] #colors colors
 
 ---
--- @type color
+-- @type colors
 -- @field #string white
 -- @field #string black
-
+-- @field #string gray
+-- @field #string lightGray
+-- @field #string blue
+-- @field #string lightBlue
+-- @field #string yellow
+-- @field #string orange
+-- @field #string red
+-- @field #string green
+-- @field #string magenta
+-- @field #string lime
+-- @field #string pink
+-- @field #string cyan
+-- @field #string purple
+-- @field #string brown
 
 return nil

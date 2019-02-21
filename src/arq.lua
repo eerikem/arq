@@ -39,20 +39,8 @@ local arqSup = require 'arq_sup'
 local ui_sup = require 'ui_supervisor'
 local arqMenu = require 'arqMenu'
 local uiMenu = require 'ui_sup_menu'
-local Attack = require "attack"
-local Elevator = require "elevator"
-local Teleport = require "teleport"
-local Airlock = require "airlock"
-local Observer = require "observer"
-local Manager = require "door_manager"
-local Password = require "password"
-local ARQ_lab = require "arq_lab"
 local toggler = require "perphListener"
 local apps = require 'apps'
-local status_ui = require "status_ui"
-local static_ui = require "static_ui"
-local Door = require "door"
-local door_ui = require "door_ui"
 local ui_coordinator = require "ui_coordinator"
 local config = require "config"
 
@@ -68,6 +56,7 @@ toggler.start()
 uiMenu:new("terminal")
 
 arqMenu.start()
+EVE.sleep(0.1)
 apps.start()
 
 EVE.run()

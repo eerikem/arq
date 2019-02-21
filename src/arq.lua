@@ -17,14 +17,15 @@ sleep = function() error("Use EVE.sleep within ARQ",2) end
 
 --- The virtual machine running the ARQ.
 -- Handles threads, event messaging and error propagation.
--- Generally you will only use for logging messages eg: VM.log("my msg")
+-- @usage VM.log("my msg")
+-- @usage VM.exit("normal")
 VM = require 'vm'
-
 ---
 -- Execute a server command.
 -- A leading slash is expected.
--- string is formatted so additional arguments will be programmatically inserted. 
--- @param #string cmd eg: "/kill @a %d %d %d"
+-- string is formatted so additional arguments will be programmatically inserted.
+-- @usage exec("/kill @a %d %d %d",x,y,z) 
+-- @param #string cmd
 function exec(cmd,...)
   if commands then
     commands.execAsync(string.format(cmd,unpack(arg)))

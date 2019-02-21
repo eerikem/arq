@@ -2,10 +2,12 @@ local gen_server = require 'gen_server'
 local ui_sup = require 'ui_supervisor'
 local Reactor = require 'lib.reactor'
 
-THE_RUNNER = false
+local THE_RUNNER = false
 local Server = {}
 
-function Server.run()
+local Eve = {}
+
+function Eve.run()
   if THE_RUNNER then
     error("Event listener is already running.",2)
   else
@@ -132,7 +134,7 @@ function Server.handle_info(Request,State)
   return State
 end
 
-function Server.tick(time)
+function Eve.tick(time)
   if not time then return end
   if VM.running() == "ROOT" then
     return sleep(time) end
@@ -146,7 +148,10 @@ local function sleep( nTime )
     until param == timer
 end
 
-function Server.sleep( time )
+---
+-- Set the running coroutine to sleep
+-- @param #number time in seconds
+function Eve.sleep( time )
   if not time then return end
   if VM.running() == "ROOT" then
     return sleep(time) end
@@ -157,37 +162,40 @@ function Server.sleep( time )
   until event == "wake" or event == "stop"
 end
 
-function Server.timer(time)
+function Eve.timer(time)
   if not time then return end
   return gen_server.call("events",{"timer",time},"infinite")
 end
 
-function Server.subscribe(event,Co)
+function Eve.subscribe(event,Co)
   local Co = Co or VM.running()
   if not VM.coroutines[Co] then error("badarg Co",2) end
   gen_server.cast("events",{"subscribe",Co,event})
 end
 
-function Server.unsubscribe(event,Co)
+function Eve.unsubscribe(event,Co)
   local Co = Co or VM.running()
   if not VM.coroutines[Co] then error("badarg Co",2) end  
   gen_server.cast("events",{"unsubscribe",Co,event})
 end
 
-function Server.subscriber(Co,Module)
+function Eve.subscriber(Co,Module)
   local ok, co = Module.start_link(Co)
   if ok ~= true or not co then error("expected: ok, Co",2) end
   return co
 end
 
---Queue an event to be triggered after time.
---Returns reference
-function Server.queue(event,time)
+---
+-- Queue an event to be sent back to the caller after some time.
+-- @param #string event The event to fire
+-- @param #number time The number of seconds to wait before firing
+-- @return reference
+function Eve.queue(event,time)
   return gen_server.call("events",{"queue",event,time},"infinite")
 end
 
-function Server.terminate(Reason,State)
+function Eve.terminate(Reason,State)
   THE_RUNNER = false
 end
 
-return Server
+return Eve, Server

@@ -1,4 +1,4 @@
-local Li = require 'eventListener'
+local _,Li = require 'eventListener'
 local ui_sup = require 'ui_supervisor'
 --local workers = require 'worker_sup'
 

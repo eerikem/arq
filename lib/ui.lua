@@ -4,6 +4,7 @@ local ui_server = require "src.ui_server"
 --- The UI Client Module
 -- An event handler for UI Client events
 -- @module UI
+local UI = {}
 
 ---
 -- @type ui
@@ -13,7 +14,7 @@ local ui_server = require "src.ui_server"
 -- @type State
 -- @field lib.ui_lib#ui ui
 
-local UI = {}
+local Server = {}
 
 ----------------
 --External API--
@@ -32,11 +33,11 @@ end
 -- @param #string Co the terminal name
 -- @param #number w width
 -- @param #number h height
--- @param #function init optional init function
+-- @param #function init optional function to initialize the new ui eg: init(ui)
 -- @return lib.ui#ui
 -- @return #thread when init provided returns thread
 function UI.start(Co,w,h,init)
-  local ok, co = gen_server.start_link(UI,{Co,w,h,VM.running(),init},{})
+  local ok, co = gen_server.start_link(Server,{Co,w,h,VM.running(),init},{})
   if not init then
     return UI.getUI(co)
   else
@@ -67,7 +68,7 @@ end
 
 --- @field [parent=#ui] #thread co
 
-function UI.init(Co,w,h,Parent,init)
+function Server.init(Co,w,h,Parent,init)
   local ui = ui_server.newWindow(Co,w,h,Parent)
   local co = VM.running()
   ui.handle = function(...)UI.handleEvent(co,...)end
@@ -77,7 +78,7 @@ function UI.init(Co,w,h,Parent,init)
   return true, {ui = ui}
 end
 
-function UI.handle_call(Request,From,State)
+function Server.handle_call(Request,From,State)
   local event = Request[1]
   if event == "ui" then
     gen_server.reply(From,State.ui)
@@ -95,7 +96,7 @@ end
 -- @param Request The event being handled
 -- @param #State State
 -- @return #State
-function UI.handle_cast(Request,State)
+function Server.handle_cast(Request,State)
   local event = Request[1]
   --WARNING this event has dependant call in ui_server.lua
   if event == "handle" then
@@ -112,7 +113,7 @@ function UI.handle_cast(Request,State)
 	return State
 end
 
-function UI.handle_info(Request,State)
+function Server.handle_info(Request,State)
   VM.log("UI got: "..unpack(Request))
   return State
 end

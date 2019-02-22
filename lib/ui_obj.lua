@@ -47,23 +47,6 @@ function Panel:contains(obj)
   end
 end
 
--- TODO PanelHandlers deprecated
-function Panel:registerPanelHandlers()
-  local handler = function(_,button,x,y)
-    local pos = (self.ypos - 1)
-    for _,o in ipairs(self.index) do
-      pos = pos + o.ypos - 1
-      local last = pos
-      pos = pos + o.height
---      print("last: "..last.." pos: "..pos.." search: "..y)sleep(1)
-      if y > last and y <= pos then
-        return o.reactor:handleEvent("selected",button,x,y)
-      end
-    end
-  end
-  self.reactor:register("selected",handler)
-end
-
 ---
 --@function [parent=#Panel] onMe
 --@param #Panel self
@@ -171,6 +154,8 @@ function proto:colorFocus(out)
   end
 end
 
+---
+-- Write to the ui terminal
 function proto:write(ui,noscroll)
   local x,y = self:setCursor(ui)
   local w,h = ui.term.getSize()
@@ -430,6 +415,10 @@ function Panel:redraw(ui,noscroll,focus)
   end
 end
 
+---
+-- Redraw Panel that has focus
+-- @param #ui ui
+-- @param #boolean noscroll
 function Panel:drawFocus(ui,noscroll)
   return self:redraw(ui,noscroll,true)
 end
@@ -438,10 +427,15 @@ function Panel:drawItem(ui,obj,noscroll,focus)
   return obj:redraw(ui,noscroll,focus)
 end
 
+---
+-- Assigns a static height to the panel
+-- @param #number height
 function Panel:setHeight(height)
   self.staticHeight = height
 end
 
+---
+-- Bulk replace content of a panel
 function Panel:setContent(...)
   self.content = {}--TODO remove metatable?
   for _,V in ipairs(arg) do
@@ -449,6 +443,8 @@ function Panel:setContent(...)
   end
 end
 
+---
+-- @param #ui_obj c
 function Panel:remove(c)
   if self.content[c] then
     local pos = self.content[c]
@@ -471,6 +467,10 @@ function Panel:remove(c)
   return nil
 end
 
+---
+-- Insert a ui_obj at the given position
+-- @param #ui_obj c
+-- @param #number pos
 function Panel:insert(c,pos)
   table.insert(self.index,pos,c)
   self.content[c]=pos
@@ -479,6 +479,8 @@ function Panel:insert(c,pos)
   end
 end
 
+---
+-- Switch first ui_obj with second ui_obj in the same position
 function Panel:replace(c,_c)
   if not c or not _c then error("badarg",2) end
   local pos = self:remove(c)
@@ -490,6 +492,8 @@ function Panel:replace(c,_c)
   end
 end
 
+---
+-- Apply the proto Table to the object. Overwrites the function definitions including redraw, drawFocus, etc...
 function Panel:applyProto(c)
   local deletionList = {}
   if not c.proto then
@@ -519,6 +523,10 @@ function Panel:applyProto(c)
   end
 end
 
+---
+-- Add the Graphic object to the Panel.
+-- Applies the prototype functions to the object.
+-- Directly defining those functions if they don't exist.
 function Panel:add(c)
   if not c then error("obj expected",2) end
 --  local o = {__index==c}
@@ -533,6 +541,9 @@ end
 
 local List = Panel:new()
 
+---
+-- A global helper function to control a given terminals cursor position.
+-- TODO remove from Global scope
 function incCursorPos(term,xpos)
   local w,h = term.getSize()
   local x,y = term.getCursorPos()

@@ -147,6 +147,10 @@ function App_Server.init(props)
   
   EVE.subscribe("redstone")
   
+  if State.detector:isOn() then
+    VM.send(VM.running(),"arrival_waiting")
+  end
+  
   return true, State
 end
 
@@ -169,6 +173,16 @@ local function detectorChanged(State)
   end
 end
 
+local function arrival(State)
+  State.ready = false
+  if State.emitter then
+    State.emitter.setRate(1)
+    State.emitter.setEmitting(true)
+  end
+  State.arrivalTele()
+  notify(State,"teleport_arrival")
+  EVE.queue("teleport_arrival",4)
+end
 ---
 -- @param Request
 -- @param #State State
@@ -200,14 +214,7 @@ function App_Server.handle_cast(Request,State)
     elseif detectorChanged(State) then 
       if State.detector:isOn() then
         if State.ready then
-          State.ready = false
-          if State.emitter then
-            State.emitter.setRate(1)
-            State.emitter.setEmitting(true)
-          end
-          State.arrivalTele()
-          notify(State,"teleport_arrival")
-          EVE.queue("teleport_arrival",4)
+          arrival(State)
         else
 --          VM.log("State wasn't ready")  
         end
@@ -262,7 +269,9 @@ function App_Server.handle_call(Request,From,State)
 end
 
 function App_Server.handle_info(Request,State)
-
+  if Request[1] == 'arrival_waiting' then
+    arrival(State)
+  end
   return State
 end
 

@@ -24,7 +24,7 @@ colors={
 }
 
 local term = {
-  w = 7, h = 5,
+  w = 14, h = 6,
   cx_pos = 1, cy_pos = 1,
   text = "white",
   back = "black"
@@ -41,6 +41,7 @@ local function emptyTerm()
   return contents
 end
 
+function term.setTextScale(x) end
 term.contents = emptyTerm()
 term.window = emptyTerm()
 term.redraw = function()
@@ -102,7 +103,9 @@ local UI = require 'lib.ui_lib'
 local Panel = require 'lib.ui_obj'
 --
 local function start(co,w,h,init)
-  init(UI:new(term))
+  local ui = UI:new(term)
+  ui.setTextScale = term.setTextScale
+  init(ui)
 end
 --
 local Graphic = require "lib.graphic"
@@ -115,10 +118,16 @@ local Graphic = require "lib.graphic"
 --ui:add(body)
 --ui:update()
 
-local telehub = require 'telehub_ui'
+--local ui_module = require 'telehub_ui'
+--local name, UI_mod = debug.getupvalue(ui_module.start,4)
+
+local ui_module = require 'telehub_info'
+local name, UI_mod = debug.getupvalue(ui_module.start,3)
 --local Teleporter = require 'telehub'
-local name, UI_mod = debug.getupvalue(telehub.start,4)
 UI_mod.start = start
-debug.setupvalue(telehub.start,4,UI_mod)
-telehub.start(nil,"Sect. E",nil)
+debug.setupvalue(ui_module.start,4,UI_mod)
+
+--ui_module.start(nil,"Sect. E",nil)
+ui_module.start(nil,{{"Sect.E ","Online"},{"Sect.D ","Offline"}})
+
 dump()

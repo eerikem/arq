@@ -12,7 +12,7 @@ end
 -- @type cable
 
 ---
--- @type Bundle
+-- @type Cable
 -- @field #cable white
 -- @field #cable black
 -- @field #cable gray
@@ -29,24 +29,21 @@ end
 -- @field #cable cyan
 -- @field #cable purple
 -- @field #cable brown 
-local Bundle={}
+local Cable={}
 
 ---
 -- @type old
 -- @extends #cable
--- @extends #Bundle
+-- @extends #Cable
 -- @extends #BUNDLE
+
+---
+-- @type events
+local e={badarg="Error: CABLE_SIDE required"}
 
 ---Global for backwords compatibility
 -- @module BUNDLE
-BUNDLE = {}
-
-local colors = {
-    white=1,black=1,gray=1,lightGray=1,
-    blue=1,lightBlue=1,yellow=1,orange=1,
-    red=1,green=1,magenta=1,lime=1,pink=1,
-    cyan=1,pruple=1,brown=1,    
-    }
+BUNDLE = {e=e}
 
 ---
 -- @function [parent=#BUNDLE] new
@@ -54,80 +51,78 @@ local colors = {
 -- @param #string CABLE_SIDE The side which the cable is connected
 -- @usage bundle = Bundle:new("right")
 -- @usage bundle.white:enable()
--- @return #Bundle
+-- @return #Cable
 
 
-local function newCable(b,color,p)
-  local o = {cable=color,side=b.side}
-  setmetatable(o,Bundle)
-  return o
+local function newCable(Bundle,color,p)
+  local cable = {cable=color,side=Bundle.side}
+  setmetatable(cable,Cable)
+  return cable
 end
 
 function BUNDLE:new(CABLE_SIDE,color,name)
   if not CABLE_SIDE then
-    error("Error: CABLE_SIDE required",2)
+    error(BUNDLE.e.badarg,2)
   end
-  local o = {
+  local bundle = {
     side=CABLE_SIDE,
     cable=color,
     name=name,
     flickering = false
   }
-  setmetatable(o, self)
+  setmetatable(bundle, self)
   
   if color then
-    self.__index = Bundle
+    self.__index = Cable
   else
-    local b = {}
-    b.__index = function(self,key)
-      if b[key] == nil and colors[key] then
-        b[key]=newCable(self,key,name)
-      else
-        return Bundle[key]
+    local cable = {}
+    cable.__index = function(self,key)
+      if cable[key] == nil and colors[key] then
+        cable[key]=newCable(self,key,name)
       end
-      return b[key]
+      return cable[key]
     end
-  setmetatable(o,b)
+  setmetatable(bundle,cable)
   end
-  return o
+  return bundle
 end
 
-setmetatable(BUNDLE,Bundle)
-Bundle.__index=Bundle
+setmetatable(BUNDLE,Cable)
+Cable.__index=Cable
 
 ---
 -- @function [parent=#cable] enable
-function Bundle:enable()
+function Cable:enable()
   redstone.setBundledOutput(self.side,colors.combine(self.cable,redstone.getBundledOutput(self.side)))
 end
 
 ---
 -- @function [parent=#cable] disable
-function Bundle:disable()
+function Cable:disable()
   redstone.setBundledOutput(self.side,colors.subtract(redstone.getBundledOutput(self.side),self.cable))
 end
 
 ---
 -- @function [parent=#cable] isOn
-function Bundle:isOn()
+function Cable:isOn()
   return colors.test(rs.getBundledInput(self.side),self.cable)
 end
 
 ---
 -- @function [parent=#old] isIn
-function Bundle:isIn()
+function Cable:isIn()
   return colors.test(rs.getBundledInput(self.side),self.cable)
 end
 
 ---
 -- @function [parent=#old] isOut
-function Bundle:isOut()
+function Cable:isOut()
   return colors.test(rs.getBundledOutput(self.side),self.cable)
 end
 
 ---
 -- @function [parent=#old] pulse
-function Bundle:pulse()
+function Cable:pulse()
   self:enable()
   waitSeconds(1)
   self:disable()
@@ -135,7 +130,7 @@ end
 
 ---
 -- @function [parent=#old] flick
-function Bundle:flick(low, high,low2,high2)
+function Cable:flick(low, high,low2,high2)
   while self.flickering do
     self:enable()
     local x = math.random(low,high)
@@ -147,7 +142,7 @@ end
 
 ---
 -- @function [parent=#old] flicker
-function Bundle:flicker(low,high,low2,high2)
+function Cable:flicker(low,high,low2,high2)
   if not low or not high then error("flicker must be given a low and high to limit random values",2) end
   if not low2 or not high2 then low2 = low high2 = high end
   if not self.flickering then
@@ -158,13 +153,13 @@ end
 
 ---
 -- @function [parent=#old] stopFlicker
-function Bundle:stopFlicker()
+function Cable:stopFlicker()
   self.flickering = false
 end
 
 ---
 -- @function [parent=#old] getName
-function Bundle:getName()
+function Cable:getName()
   return self.name
 end
 

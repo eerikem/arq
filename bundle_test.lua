@@ -1,31 +1,7 @@
 
+require 'cc_api'
 local luaunit = require 'lib.luaunit'
 
-redstone = {}
-rs = redstone
-rs.getBundledInput = function() end
-rs.getBundledOutput = function() end
-rs.setBundledOutput = function() end
-
-colors = {
-    white="white",black="black",gray="gray",
-    lightGray="lightGray", blue="blue",
-    lightBlue="lightBlue", yellow="yellow",
-    orange="orange",red="red",green="green",
-    magenta="magenta",lime="lime",pink="pink",
-    yan="cyan",purple="purple", brown="brown",    
-    }
-local rsBundle = {}
-
-local function resetBundle()
-  for k,v in pairs(colors) do
-    rsBundle[k] = false
-  end
-end
-    
-colors.combine = function(color,_) rsBundle[color]=true end
-colors.subtract = function(_,color) rsBundle[color]=false end
-colors.test = function(_,color) return rsBundle[color] end
 
 local Bundle = require 'lib.bundle'
 
